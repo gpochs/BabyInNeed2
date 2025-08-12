@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useEffect, useMemo, useState } from "react";
 import { supabaseClient } from "@/lib/supabaseClient";
+import StrollerGame from "./components/StrollerGame";
 
 type Item = {
   id: string; item: string; url?: string; price?: string; size?: string; notes?: string;
@@ -198,136 +199,289 @@ export default function Page() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">👶 Baby in Need</h1>
-        <div className="flex items-center gap-2">
-          {adminCode ? (
-            <button className="px-3 py-1 border rounded" onClick={disableAdmin}>Admin deaktivieren</button>
-          ) : (
-            <button className="px-3 py-1 border rounded" onClick={enableAdmin}>Admin aktivieren</button>
-          )}
-          <button className="px-3 py-1 border rounded" onClick={async () => {
-            await navigator.clipboard.writeText(window.location.href);
-            alert("Öffentlichen Link kopiert!");
-          }}>Link kopieren</button>
-        </div>
-      </header>
-
-      {adminCode && (
-        <>
-          <section className="border rounded-lg p-4 space-y-3">
-            <div className="font-semibold">E-Mail-Überwachung</div>
-            <div className="flex gap-2">
-              <button onClick={checkEmailStatus} className="px-3 py-2 rounded bg-blue-600 text-white">
-                E-Mail-Status prüfen
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="max-w-6xl mx-auto p-6 space-y-8">
+        {/* Header */}
+        <header className="text-center space-y-4">
+          <h1 className="text-5xl font-bold gradient-text">👶 Baby in Need</h1>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Eine liebevolle Plattform für Baby-Geschenke. Schenkende können Items reservieren und Eltern werden automatisch benachrichtigt.
+          </p>
+          
+          <div className="flex items-center justify-center gap-4">
+            {adminCode ? (
+              <button 
+                className="px-6 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300" 
+                onClick={disableAdmin}
+              >
+                🔐 Admin deaktivieren
               </button>
-              {emailStatus && (
-                <div className={`px-3 py-2 rounded ${emailStatus.valid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {emailStatus.message}
-                </div>
-              )}
-            </div>
-            
-            <div className="border-t pt-3 mt-3">
-              <div className="text-sm mb-2">Test-E-Mail senden:</div>
-              <div className="grid gap-2 md:grid-cols-3">
-                <input 
-                  value={testEmail} 
-                  onChange={(e) => setTestEmail(e.target.value)}
-                  className="border rounded px-3 py-2" 
-                  placeholder="test@example.com" 
-                />
-                <input 
-                  value={testItem} 
-                  onChange={(e) => setTestItem(e.target.value)}
-                  className="border rounded px-3 py-2" 
-                  placeholder="Test-Geschenk" 
-                />
+            ) : (
+              <button 
+                className="px-6 py-3 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300" 
+                onClick={enableAdmin}
+              >
+                🔑 Admin aktivieren
+              </button>
+            )}
+            <button 
+              className="px-6 py-3 rounded-full bg-violet-500 hover:bg-violet-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300" 
+              onClick={async () => {
+                await navigator.clipboard.writeText(window.location.href);
+                alert("✅ Öffentlichen Link kopiert!");
+              }}
+            >
+              📋 Link kopieren
+            </button>
+          </div>
+        </header>
+
+        {/* Game Section */}
+        <StrollerGame />
+
+        {/* Admin Sections */}
+        {adminCode && (
+          <>
+            {/* Email Monitoring */}
+            <section className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+              <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+                📧 E-Mail-Überwachung
+              </h2>
+              <div className="flex gap-4 items-center">
                 <button 
-                  onClick={sendTestEmail} 
-                  className="px-3 py-2 rounded bg-green-600 text-white"
-                  disabled={!testEmail || !testItem}
+                  onClick={checkEmailStatus} 
+                  className="px-6 py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
                 >
-                  Test-E-Mail senden
+                  🔍 E-Mail-Status prüfen
+                </button>
+                {emailStatus && (
+                  <div className={`px-4 py-3 rounded-lg font-medium ${
+                    emailStatus.valid 
+                      ? 'bg-green-100 text-green-800 border border-green-200' 
+                      : 'bg-red-100 text-red-800 border border-red-200'
+                  }`}>
+                    {emailStatus.message}
+                  </div>
+                )}
+              </div>
+              
+              <div className="border-t border-slate-200 pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-slate-700 mb-3">🧪 Test-E-Mail senden:</h3>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <input 
+                    value={testEmail} 
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    className="border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
+                    placeholder="test@example.com" 
+                  />
+                  <input 
+                    value={testItem} 
+                    onChange={(e) => setTestItem(e.target.value)}
+                    className="border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
+                    placeholder="Test-Geschenk" 
+                  />
+                  <button 
+                    onClick={sendTestEmail} 
+                    className="px-6 py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!testEmail || !testItem}
+                  >
+                    📤 Test-E-Mail senden
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* Settings */}
+            <section className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+              <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+                ⚙️ Einstellungen
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    📧 E-Mails der Beschenkten (Komma-getrennt)
+                  </label>
+                  <input 
+                    value={parentEmails} 
+                    onChange={(e) => setParentEmails(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
+                    placeholder="du@mail.ch, partner@mail.ch" 
+                  />
+                </div>
+                <button 
+                  onClick={saveParentEmails} 
+                  className="px-6 py-3 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
+                >
+                  💾 Speichern
                 </button>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="border rounded-lg p-4 space-y-3">
-            <div className="font-semibold">Einstellungen</div>
-            <label className="text-sm">E-Mails der Beschenkten (Komma-getrennt)</label>
-            <input value={parentEmails} onChange={(e) => setParentEmails(e.target.value)}
-                   className="w-full border rounded px-3 py-2" placeholder="du@mail.ch, partner@mail.ch" />
-            <button onClick={saveParentEmails} className="px-3 py-2 rounded bg-black text-white">Speichern</button>
-          </section>
-
-          <section className="border rounded-lg p-4 space-y-3">
-            <div className="font-semibold">Neues Item hinzufügen</div>
-            <form id="add-form" onSubmit={(e) => { e.preventDefault(); addItem(new FormData(e.currentTarget)); }}
-                  className="grid gap-3 md:grid-cols-6">
-              <div className="md:col-span-2">
-                <label className="text-sm">Item*</label>
-                <input name="item" required className="w-full border rounded px-3 py-2" placeholder="z.B. Tragetuch" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm">Link</label>
-                <input name="url" className="w-full border rounded px-3 py-2" placeholder="https://…" />
-              </div>
-              <div><label className="text-sm">Preis</label>
-                <input name="price" className="w-full border rounded px-3 py-2" placeholder="CHF …" /></div>
-              <div><label className="text-sm">Grösse</label>
-                <input name="size" className="w-full border rounded px-3 py-2" placeholder="62/68, 0–3 M" /></div>
-              <div className="md:col-span-6"><label className="text-sm">Notizen</label>
-                <input name="notes" className="w-full border rounded px-3 py-2" placeholder="Farbe/Variante, Alternativen …" /></div>
-              <div className="md:col-span-6"><button type="submit" className="px-4 py-2 rounded bg-black text-white">Hinzufügen</button></div>
-            </form>
-          </section>
-        </>
-      )}
-
-      <section className="grid gap-6 md:grid-cols-2">
-        <div className="border rounded-lg p-4">
-          <div className="font-semibold mb-2">Offen</div>
-          {loading && <div className="text-sm text-gray-500">Lädt…</div>}
-          {!loading && open.length === 0 && <div className="text-sm text-gray-500">Keine offenen Items.</div>}
-          <ul className="space-y-3">
-            {open.map((i) => (
-              <li key={i.id} className="border rounded p-3 flex items-start justify-between gap-3 hover:shadow-sm">
+            {/* Add Item */}
+            <section className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+              <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+                ➕ Neues Item hinzufügen
+              </h2>
+              <form 
+                id="add-form" 
+                onSubmit={(e) => { e.preventDefault(); addItem(new FormData(e.currentTarget)); }}
+                className="grid gap-4 md:grid-cols-6"
+              >
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Item *</label>
+                  <input 
+                    name="item" 
+                    required 
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
+                    placeholder="z.B. Tragetuch" 
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Link</label>
+                  <input 
+                    name="url" 
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
+                    placeholder="https://…" 
+                  />
+                </div>
                 <div>
-                  <div className="font-medium">{i.item}</div>
-                  <div className="text-sm text-gray-600 flex flex-wrap gap-2">
-                    {i.price && <span className="px-2 py-0.5 border rounded">{i.price}</span>}
-                    {i.size && <span className="px-2 py-0.5 border rounded">Grösse {i.size}</span>}
-                    {i.url && <a className="underline" href={i.url} target="_blank">Zum Produkt</a>}
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Preis</label>
+                  <input 
+                    name="price" 
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
+                    placeholder="CHF …" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Grösse</label>
+                  <input 
+                    name="size" 
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
+                    placeholder="62/68, 0–3 M" 
+                  />
+                </div>
+                <div className="md:col-span-6">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Notizen</label>
+                  <input 
+                    name="notes" 
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
+                    placeholder="Farbe/Variante, Alternativen …" 
+                  />
+                </div>
+                <div className="md:col-span-6">
+                  <button 
+                    type="submit" 
+                    className="px-8 py-3 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
+                  >
+                    ➕ Hinzufügen
+                  </button>
+                </div>
+              </form>
+            </section>
+          </>
+        )}
+
+        {/* Items Grid */}
+        <section className="grid gap-8 md:grid-cols-2">
+          {/* Open Items */}
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+            <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+              🎁 Offen <span className="text-sm font-normal text-slate-500">({open.length})</span>
+            </h2>
+            {loading && <div className="text-slate-500 text-center py-8">⏳ Lädt…</div>}
+            {!loading && open.length === 0 && (
+              <div className="text-slate-500 text-center py-8">✨ Keine offenen Items.</div>
+            )}
+            <ul className="space-y-4">
+              {open.map((i) => (
+                <li key={i.id} className="border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all duration-300 bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <div className="space-y-3">
+                    <div className="font-semibold text-lg text-slate-800">{i.item}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {i.price && (
+                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                          💰 {i.price}
+                        </span>
+                      )}
+                      {i.size && (
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                          📏 Grösse {i.size}
+                        </span>
+                      )}
+                      {i.url && (
+                        <a 
+                          className="px-3 py-1 bg-violet-100 text-violet-800 rounded-full text-sm font-medium hover:bg-violet-200 transition-colors duration-300" 
+                          href={i.url} 
+                          target="_blank"
+                        >
+                          🔗 Zum Produkt
+                        </a>
+                      )}
+                    </div>
+                    {i.notes && (
+                      <div className="text-sm text-slate-600 bg-white p-3 rounded-lg border border-slate-200">
+                        📝 {i.notes}
+                      </div>
+                    )}
+                    <div className="flex gap-3">
+                      <button 
+                        className="flex-1 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300" 
+                        onClick={() => claim(i.id)} 
+                        data-item-id={i.id}
+                      >
+                        🎁 Ich schenke das
+                      </button>
+                      {adminCode && (
+                        <button 
+                          className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300" 
+                          onClick={() => removeItem(i.id)}
+                        >
+                          🗑️ Löschen
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {i.notes && <div className="text-sm mt-1">{i.notes}</div>}
-                </div>
-                <div className="flex gap-2">
-                  <button className="px-3 py-1 rounded bg-black text-white" onClick={() => claim(i.id)} data-item-id={i.id}>Ich schenke das</button>
-                  {adminCode && <button className="px-3 py-1 rounded border" onClick={() => removeItem(i.id)}>Löschen</button>}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        <div className="border rounded-lg p-4">
-          <div className="font-semibold mb-2">Reserviert</div>
-          {!loading && reserved.length === 0 && <div className="text-sm text-gray-500">Noch nichts reserviert.</div>}
-          <ul className="space-y-3">
-            {reserved.map((i) => (
-              <li key={i.id} className="border rounded p-3 bg-gray-50">
-                <div className="font-medium">{i.item}</div>
-                <div className="text-sm text-gray-600">reserviert am {new Date(i.claimed_at!).toLocaleDateString()}</div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+          {/* Reserved Items */}
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+            <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+              ✅ Reserviert <span className="text-sm font-normal text-slate-500">({reserved.length})</span>
+            </h2>
+            {!loading && reserved.length === 0 && (
+              <div className="text-slate-500 text-center py-8">🎉 Noch nichts reserviert.</div>
+            )}
+            <ul className="space-y-4">
+              {reserved.map((i) => (
+                <li key={i.id} className="border border-slate-200 rounded-xl p-4 bg-gradient-to-r from-green-50 to-emerald-50">
+                  <div className="space-y-3">
+                    <div className="font-semibold text-lg text-slate-800">{i.item}</div>
+                    <div className="text-sm text-slate-600 bg-white p-3 rounded-lg border border-slate-200">
+                      📅 Reserviert am {new Date(i.claimed_at!).toLocaleDateString('de-CH')}
+                    </div>
+                    {adminCode && (
+                      <button 
+                        className="w-full px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300" 
+                        onClick={() => removeItem(i.id)}
+                      >
+                        🗑️ Löschen
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
-      <footer className="text-xs text-gray-500">Öffentlichen Link teilen → Gäste können reservieren (ohne Login).</footer>
+        {/* Footer */}
+        <footer className="text-center text-slate-500 text-sm py-8">
+          <p>🔗 Öffentlichen Link teilen → Gäste können reservieren (ohne Login).</p>
+        </footer>
+      </div>
     </div>
   );
 }
