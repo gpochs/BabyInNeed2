@@ -89,11 +89,13 @@ export default function Home() {
         .eq('key', 'email_recipients')
         .single();
 
-      if (!error && data) {
+      if (!error && data && data.value) {
         setEmailConfig(prev => ({ ...prev, recipients: data.value }));
       }
     } catch (error) {
       console.error('Error loading email config:', error);
+      // Fallback to default email
+      setEmailConfig(prev => ({ ...prev, recipients: 'gianpeterochsner@gmail.com' }));
     }
   }, []);
 
@@ -211,8 +213,8 @@ export default function Home() {
   // Filter items
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.category?.toLowerCase().includes(searchTerm.toLowerCase());
+                         (item.notes ? item.notes.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+                         (item.category ? item.category.toLowerCase().includes(searchTerm.toLowerCase()) : false);
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -221,7 +223,7 @@ export default function Home() {
   const reservedItems = filteredItems.filter(item => item.status === 'reserviert');
 
   // Get unique categories
-  const categories = ['all', ...Array.from(new Set(items.map(item => item.category).filter(Boolean)))];
+  const categories = ['all', ...Array.from(new Set(items.map(item => item.category || '').filter(cat => cat && cat.trim())))];
 
   // Load data on mount
   useEffect(() => {
