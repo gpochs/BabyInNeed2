@@ -3,9 +3,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import StrollerGame from './components/StrollerGame';
 
+// Ensure environment variables are available
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables');
+}
+
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  supabaseUrl || 'https://ksrgpydocqesasbnxmew.supabase.co',
+  supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzcmdweWRvY3Flc2FzYm54bWV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NTM5NDcsImV4cCI6MjA3MDUyOTk0N30.hAiYw1pcWDmOYn7Qju8xweCBdCQCKcNbGX8chXYVWlo'
 );
 
 interface Item {
@@ -72,9 +80,25 @@ export default function Home() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setItems(data || []);
+      
+      // Ensure all items have required fields with fallbacks
+      const safeItems = (data || []).map(item => ({
+        id: item.id || '',
+        name: item.name || '',
+        price: item.price || '',
+        size: item.size || '',
+        notes: item.notes || '',
+        link: item.link || '',
+        status: item.status || 'offen',
+        created_at: item.created_at || new Date().toISOString(),
+        priority: item.priority || 'medium',
+        category: item.category || ''
+      }));
+      
+      setItems(safeItems);
     } catch (error) {
       console.error('Error loading items:', error);
+      setItems([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -89,8 +113,11 @@ export default function Home() {
         .eq('key', 'email_recipients')
         .single();
 
-      if (!error && data && data.value) {
-        setEmailConfig(prev => ({ ...prev, recipients: data.value }));
+      if (!error && data && data.value && typeof data.value === 'string') {
+        setEmailConfig(prev => ({ ...prev, recipients: data.value.trim() }));
+      } else {
+        // Fallback to default email if no config or invalid data
+        setEmailConfig(prev => ({ ...prev, recipients: 'gianpeterochsner@gmail.com' }));
       }
     } catch (error) {
       console.error('Error loading email config:', error);
@@ -212,10 +239,17 @@ export default function Home() {
 
   // Filter items
   const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (item.notes ? item.notes.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
-                         (item.category ? item.category.toLowerCase().includes(searchTerm.toLowerCase()) : false);
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    // Ensure all fields are strings before calling toLowerCase
+    const itemName = String(item.name || '');
+    const itemNotes = String(item.notes || '');
+    const itemCategory = String(item.category || '');
+    const searchTermSafe = String(searchTerm || '');
+    
+    const matchesSearch = itemName.toLowerCase().includes(searchTermSafe.toLowerCase()) ||
+                         itemNotes.toLowerCase().includes(searchTermSafe.toLowerCase()) ||
+                         itemCategory.toLowerCase().includes(searchTermSafe.toLowerCase());
+    
+    const matchesCategory = selectedCategory === 'all' || itemCategory === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -223,7 +257,11 @@ export default function Home() {
   const reservedItems = filteredItems.filter(item => item.status === 'reserviert');
 
   // Get unique categories
-  const categories = ['all', ...Array.from(new Set(items.map(item => item.category || '').filter(cat => cat && cat.trim())))];
+  const categories = ['all', ...Array.from(new Set(
+    items
+      .map(item => String(item.category || ''))
+      .filter(cat => cat && cat.trim() && cat !== 'undefined')
+  ))];
 
   // Load data on mount
   useEffect(() => {
