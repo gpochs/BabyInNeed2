@@ -14,9 +14,6 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [adminCode, setAdminCode] = useState<string | null>(null);
   const [parentEmails, setParentEmails] = useState("");
-  const [emailStatus, setEmailStatus] = useState<{ valid: boolean; message: string } | null>(null);
-  const [testEmail, setTestEmail] = useState("");
-  const [testItem, setTestItem] = useState("Test-Geschenk");
 
   const open = useMemo(() => items.filter(i => !i.claimed_at), [items]);
   const reserved = useMemo(() => items.filter(i => !!i.claimed_at), [items]);
@@ -130,73 +127,7 @@ export default function Page() {
     if (res.ok) alert("Gespeichert."); else alert("Speichern fehlgeschlagen.");
   }
 
-  async function checkEmailStatus() {
-    const code = adminCode ?? ""; if (!code) return alert("Admin-Code fehlt.");
-    
-    try {
-      const res = await fetch("/api/admin/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-code": code },
-        body: JSON.stringify({ action: "status" }),
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) {
-          setEmailStatus({ 
-            valid: true, 
-            message: `✅ E-Mail-Service funktioniert (${result.domains} Domains verfügbar)` 
-          });
-        } else {
-          setEmailStatus({ 
-            valid: false, 
-            message: `❌ E-Mail-Service Problem: ${result.error}` 
-          });
-        }
-      } else {
-        setEmailStatus({ 
-          valid: false, 
-          message: "❌ Konnte E-Mail-Status nicht prüfen" 
-        });
-      }
-    } catch {
-      setEmailStatus({ 
-        valid: false, 
-        message: "❌ Netzwerkfehler beim Prüfen des E-Mail-Status" 
-      });
-    }
-  }
 
-  async function sendTestEmail() {
-    const code = adminCode ?? ""; if (!code) return alert("Admin-Code fehlt.");
-    if (!testEmail || !testItem) return alert("Bitte E-Mail und Test-Item eingeben.");
-    
-    try {
-      const res = await fetch("/api/admin/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-code": code },
-        body: JSON.stringify({ 
-          action: "test", 
-          email: testEmail, 
-          itemName: testItem 
-        }),
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) {
-          alert(`✅ Test-E-Mail erfolgreich gesendet an ${testEmail}`);
-          setTestEmail("");
-        } else {
-          alert(`❌ Test-E-Mail fehlgeschlagen: ${result.error}`);
-        }
-      } else {
-        alert("❌ Konnte Test-E-Mail nicht senden");
-      }
-    } catch {
-      alert("❌ Netzwerkfehler beim Senden der Test-E-Mail");
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -242,54 +173,6 @@ export default function Page() {
         {/* Admin Sections */}
         {adminCode && (
           <>
-            {/* Email Monitoring */}
-            <section className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
-                📧 E-Mail-Überwachung
-              </h2>
-              <div className="flex gap-4 items-center">
-                <button 
-                  onClick={checkEmailStatus} 
-                  className="px-6 py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  🔍 E-Mail-Status prüfen
-                </button>
-                {emailStatus && (
-                  <div className={`px-4 py-3 rounded-lg font-medium ${
-                    emailStatus.valid 
-                      ? 'bg-green-100 text-green-800 border border-green-200' 
-                      : 'bg-red-100 text-red-800 border border-red-200'
-                  }`}>
-                    {emailStatus.message}
-                  </div>
-                )}
-              </div>
-              
-              <div className="border-t border-slate-200 pt-6 mt-6">
-                <h3 className="text-lg font-semibold text-slate-700 mb-3">🧪 Test-E-Mail senden:</h3>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <input 
-                    value={testEmail} 
-                    onChange={(e) => setTestEmail(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
-                    placeholder="test@example.com" 
-                  />
-                  <input 
-                    value={testItem} 
-                    onChange={(e) => setTestItem(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
-                    placeholder="Test-Geschenk" 
-                  />
-                  <button 
-                    onClick={sendTestEmail} 
-                    className="px-6 py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!testEmail || !testItem}
-                  >
-                    📤 Test-E-Mail senden
-                  </button>
-                </div>
-              </div>
-            </section>
 
             {/* Settings */}
             <section className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
