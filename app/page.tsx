@@ -21,6 +21,7 @@ interface Item {
   name: string;
   price: string;
   size: string;
+  color: string;
   notes: string;
   link?: string;
   status: 'offen' | 'reserviert';
@@ -56,6 +57,7 @@ export default function Home() {
     name: string;
     price: string;
     size: string;
+    color: string;
     notes: string;
     link: string;
     priority: 'low' | 'medium' | 'high';
@@ -64,6 +66,7 @@ export default function Home() {
     name: '',
     price: '',
     size: '',
+    color: '',
     notes: '',
     link: '',
     priority: 'medium',
@@ -87,6 +90,7 @@ export default function Home() {
         name: item.name || '',
         price: item.price || '',
         size: item.size || '',
+        color: item.color || '',
         notes: item.notes || '',
         link: item.link || '',
         status: item.status || 'offen',
@@ -162,6 +166,7 @@ export default function Home() {
           name: newItem.name.trim(),
           price: newItem.price.trim() || null,
           size: newItem.size.trim() || null,
+          color: newItem.color.trim() || null,
           notes: newItem.notes.trim() || null,
           link: newItem.link.trim() || null,
           priority: newItem.priority,
@@ -176,6 +181,7 @@ export default function Home() {
         name: '',
         price: '',
         size: '',
+        color: '',
         notes: '',
         link: '',
         priority: 'medium',
@@ -273,26 +279,32 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-700 via-slate-600 to-indigo-700 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Lade Items...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-300 mx-auto mb-4"></div>
+          <p className="text-slate-200 text-lg font-medium">Lade Items...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-700 via-slate-600 to-indigo-700">
       {/* Header */}
-      <header className="bg-white shadow-lg border-b border-slate-200 sticky top-0 z-50">
+      <header className="bg-gradient-to-r from-slate-600 via-slate-500 to-indigo-600 shadow-2xl border-b border-slate-400 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between">
             <div className="text-center sm:text-left mb-4 sm:mb-0">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
                 🍼 Baby in Need
               </h1>
-              <p className="text-slate-600 mt-2">Gemeinsam für Familien da</p>
+              <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
+                <span className="text-2xl">👶</span>
+                <span className="text-2xl">🍼</span>
+                <span className="text-2xl">🧸</span>
+                <span className="text-2xl">👕</span>
+                <span className="text-2xl">🚼</span>
+              </div>
             </div>
             
             {/* Admin Access */}
@@ -423,14 +435,21 @@ export default function Home() {
                     onChange={(e) => setNewItem(prev => ({ ...prev, price: e.target.value }))}
                     className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
-                <input 
+                  <input 
                     type="text"
-                    placeholder="Größe"
+                    placeholder="Größe (z.B. 0-3 Monate)"
                     value={newItem.size}
                     onChange={(e) => setNewItem(prev => ({ ...prev, size: e.target.value }))}
                     className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-                <input 
+                  />
+                  <input
+                    type="text"
+                    placeholder="Farbe"
+                    value={newItem.color}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, color: e.target.value }))}
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                  <input 
                     type="text"
                     placeholder="Kategorie"
                     value={newItem.category}
@@ -448,7 +467,7 @@ export default function Home() {
                   </select>
                   <input
                     type="url"
-                    placeholder="Link (optional)"
+                    placeholder="Weblink (optional)"
                     value={newItem.link}
                     onChange={(e) => setNewItem(prev => ({ ...prev, link: e.target.value }))}
                     className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"

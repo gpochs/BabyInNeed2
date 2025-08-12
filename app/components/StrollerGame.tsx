@@ -15,6 +15,7 @@ interface Obstacle {
   color: string;
   isStreet: boolean;
   isGoal?: boolean;
+  label?: string;
 }
 
 interface Vehicle {
@@ -134,8 +135,8 @@ export default function StrollerGame() {
           type: 'street',
           pos: { x, y: street.y },
           size: { width: 1, height: 1 },
-          emoji: '🛣️',
-          color: 'bg-yellow-100',
+          emoji: '',
+          color: 'bg-gray-400',
           isStreet: true
         });
       }
@@ -149,8 +150,8 @@ export default function StrollerGame() {
           type: 'street',
           pos: { x: street.x, y },
           size: { width: 1, height: 1 },
-          emoji: '🛣️',
-          color: 'bg-yellow-100',
+          emoji: '',
+          color: 'bg-gray-400',
           isStreet: true
         });
       }
@@ -162,19 +163,30 @@ export default function StrollerGame() {
       emoji: string;
       color: string;
       count: number;
+      size: { width: number; height: number };
     }> = [
-      // Houses
-      { type: 'house', emoji: '🏠', color: 'bg-red-200', count: 8 },
-      { type: 'skyscraper', emoji: '🏢', color: 'bg-blue-200', count: 6 },
-      { type: 'tree', emoji: '🌳', color: 'bg-green-200', count: 12 },
-      { type: 'trafficLight', emoji: '🚦', color: 'bg-yellow-200', count: 4 },
-      { type: 'bikeRack', emoji: '🚲', color: 'bg-gray-200', count: 3 },
-      { type: 'wall', emoji: '🧱', color: 'bg-gray-300', count: 6 },
-      { type: 'hedge', emoji: '🌿', color: 'bg-green-300', count: 8 },
-      { type: 'school', emoji: '🏫', color: 'bg-purple-200', count: 1 },
-      { type: 'hospital', emoji: '🏥', color: 'bg-red-300', count: 1 },
-      { type: 'mall', emoji: '🏬', color: 'bg-pink-200', count: 1 },
-      { type: 'forest', emoji: '🌲', color: 'bg-green-400', count: 1 }
+      // Houses (2x2)
+      { type: 'house', emoji: '🏠', color: 'bg-red-300', count: 6, size: { width: 2, height: 2 } },
+      // Skyscrapers (2x2)
+      { type: 'skyscraper', emoji: '🏢', color: 'bg-blue-300', count: 4, size: { width: 2, height: 2 } },
+      // Trees (1x1)
+      { type: 'tree', emoji: '🌳', color: 'bg-green-300', count: 10, size: { width: 1, height: 1 } },
+      // Traffic Lights (1x1)
+      { type: 'trafficLight', emoji: '🚦', color: 'bg-yellow-300', count: 4, size: { width: 1, height: 1 } },
+      // Bike Racks (1x1)
+      { type: 'bikeRack', emoji: '🚲', color: 'bg-gray-300', count: 3, size: { width: 1, height: 1 } },
+      // Walls (1x1)
+      { type: 'wall', emoji: '🧱', color: 'bg-gray-400', count: 6, size: { width: 1, height: 1 } },
+      // Hedges (1x1)
+      { type: 'hedge', emoji: '🌿', color: 'bg-green-400', count: 8, size: { width: 1, height: 1 } },
+      // School (2x2)
+      { type: 'school', emoji: '🏫', color: 'bg-purple-300', count: 1, size: { width: 2, height: 2 } },
+      // Hospital (2x2)
+      { type: 'hospital', emoji: '🏥', color: 'bg-red-400', count: 1, size: { width: 2, height: 2 } },
+      // Mall (2x2)
+      { type: 'mall', emoji: '🏬', color: 'bg-pink-300', count: 1, size: { width: 2, height: 2 } },
+      // Forest (2x2)
+      { type: 'forest', emoji: '🌲', color: 'bg-green-500', count: 1, size: { width: 2, height: 2 } }
     ];
 
     staticObstacles.forEach(obstacle => {
@@ -200,38 +212,58 @@ export default function StrollerGame() {
         );
 
         if (attempts < 50) {
-          if (obstacle.type === 'forest') {
-            // 2x2 forest
-            for (let dx = 0; dx < 2; dx++) {
-              for (let dy = 0; dy < 2; dy++) {
-                const forestPos = { x: pos.x + dx, y: pos.y + dy };
-                if (forestPos.x < GAME_SIZE && forestPos.y < GAME_SIZE) {
-                  obstacles.push({
-                    id: `forest-${forestPos.x}-${forestPos.y}`,
-                    type: obstacle.type,
-                    pos: forestPos,
-                    size: { width: 2, height: 2 },
-                    emoji: obstacle.emoji,
-                    color: obstacle.color,
-                    isStreet: false
-                  });
-                }
+          // Check if we can place the obstacle with its size
+          const canPlace = (() => {
+            for (let dx = 0; dx < obstacle.size.width; dx++) {
+              for (let dy = 0; dy < obstacle.size.height; dy++) {
+                const checkPos = { x: pos.x + dx, y: pos.y + dy };
+                if (checkPos.x >= GAME_SIZE || checkPos.y >= GAME_SIZE) return false;
+                if (obstacles.some(obs => obs.pos.x === checkPos.x && obs.pos.y === checkPos.y)) return false;
+                if (checkPos.x >= GAME_SIZE - 4 && checkPos.y >= GAME_SIZE - 4) return false; // Stroller start area
+                if (checkPos.x <= 2 && checkPos.y <= 2) return false; // Goal area
               }
             }
-          } else {
-            obstacles.push({
-              id: `${obstacle.type}-${i}-${pos.x}-${pos.y}`,
-              type: obstacle.type,
-              pos,
-              size: { width: 1, height: 1 },
-              emoji: obstacle.emoji,
-              color: obstacle.color,
-              isStreet: false
-            });
+            return true;
+          })();
+
+          if (canPlace) {
+            // Place the obstacle with its full size
+            for (let dx = 0; dx < obstacle.size.width; dx++) {
+              for (let dy = 0; dy < obstacle.size.height; dy++) {
+                const obstaclePos = { x: pos.x + dx, y: pos.y + dy };
+                obstacles.push({
+                  id: `${obstacle.type}-${i}-${obstaclePos.x}-${obstaclePos.y}`,
+                  type: obstacle.type,
+                  pos: obstaclePos,
+                  size: obstacle.size,
+                  emoji: dx === 0 && dy === 0 ? obstacle.emoji : '', // Only show emoji on first cell
+                  color: obstacle.color,
+                  isStreet: false
+                });
+              }
+            }
           }
         }
       }
     });
+
+    // Add goal (4x4 house)
+    for (let dx = 0; dx < 4; dx++) {
+      for (let dy = 0; dy < 4; dy++) {
+        const goalPos = { x: dx, y: dy };
+        obstacles.push({
+          id: `goal-${goalPos.x}-${goalPos.y}`,
+          type: 'house',
+          pos: goalPos,
+          size: { width: 4, height: 4 },
+          emoji: dx === 0 && dy === 0 ? '🏠' : '', // Only show emoji on first cell
+          color: 'bg-green-400',
+          isStreet: false,
+          isGoal: true,
+          label: dx === 1 && dy === 1 ? 'ZIEL' : '' // Label in center
+        });
+      }
+    }
 
     // Add vehicles
     const vehicleTypes = [
