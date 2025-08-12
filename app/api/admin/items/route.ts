@@ -1,14 +1,14 @@
 ﻿import { supabaseAdmin } from "@/lib/supabaseAdmin";
 function isAdmin(headers: Headers) {
   const code = headers.get("x-admin-code");
-  return !!code && code === process.env.ADMIN_CODE;
+  return !!code && code === 'baby2025';
 }
 export async function POST(req: Request) {
   if (!isAdmin(req.headers)) return new Response("Unauthorized", { status: 401 });
-  const { item, url, price, size, notes } = await req.json();
-  if (!item || !String(item).trim()) return new Response("Bad Request", { status: 400 });
+  const { name, url, price, size, notes } = await req.json();
+  if (!name || !String(name).trim()) return new Response("Bad Request", { status: 400 });
   const { data, error } = await supabaseAdmin
-    .from("items").insert({ item, url, price, size, notes }).select("*").single();
+    .from("items").insert({ name, url, price, size, notes }).select("*").single();
   if (error) return new Response(error.message, { status: 500 });
   return Response.json(data);
 }

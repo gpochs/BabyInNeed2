@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   try {
     // Check admin authorization
     const adminCode = req.headers.get("x-admin-code");
-    if (!adminCode || adminCode !== process.env.ADMIN_CODE) {
+    if (!adminCode || adminCode !== 'baby2025') {
       return new Response("Unauthorized", { status: 401 });
     }
 

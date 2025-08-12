@@ -1,7 +1,7 @@
 ﻿import { supabaseAdmin } from "@/lib/supabaseAdmin";
 function isAdmin(headers: Headers) {
   const code = headers.get("x-admin-code");
-  return !!code && code === process.env.ADMIN_CODE;
+  return !!code && code === 'baby2025';
 }
 export async function POST(req: Request) {
   if (!isAdmin(req.headers)) return new Response("Unauthorized", { status: 401 });
