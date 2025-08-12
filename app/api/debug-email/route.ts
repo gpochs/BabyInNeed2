@@ -19,8 +19,9 @@ export async function GET(req: Request) {
     });
 
     return Response.json(r);
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("debug-email:", e);
-    return new Response(e?.message ?? "error", { status: 500 });
+    const errorMessage = e instanceof Error ? e.message : "Unknown error";
+    return new Response(errorMessage, { status: 500 });
   }
 }
