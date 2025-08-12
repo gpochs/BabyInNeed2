@@ -1,5 +1,6 @@
 ﻿import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { emailTemplates } from "@/lib/emailTemplates";
 
 export async function POST(req: Request) {
   try {
@@ -27,24 +28,71 @@ export async function POST(req: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY!);
     const from = process.env.NOTIFY_FROM ?? "Baby in Need <onboarding@resend.dev>";
 
-    // Donor confirmation
-    await resend.emails.send({
-      from, to: email,
-      subject: "Reservierung bestätigt – Baby in Need",
-      text: `Danke fürs Schenken! Du hast "${data.item}" reserviert.`
-    });
-
-    // Parents notification (item only)
-    if (recipients.length) {
-      await resend.emails.send({
-        from, to: recipients,
-        subject: "Neues Geschenk reserviert – Baby in Need",
-        text: `Soeben wurde "${data.item}" reserviert.`
+    // Donor confirmation - CRITICAL: This must succeed
+    let donorEmailSent = false;
+    try {
+      const donorTemplate = emailTemplates.donorConfirmation(data.item);
+      const donorResult = await resend.emails.send({
+        from, 
+        to: email,
+        subject: donorTemplate.subject,
+        text: donorTemplate.text,
+        html: donorTemplate.html
       });
+      
+      if (donorResult.error) {
+        console.error("Donor email failed:", donorResult.error);
+        throw new Error(`Donor email failed: ${donorResult.error.message}`);
+      }
+      
+      donorEmailSent = true;
+      console.log("Donor confirmation email sent successfully to:", email);
+    } catch (emailError) {
+      console.error("Critical: Failed to send donor confirmation email:", emailError);
+      // If donor email fails, we should not proceed with the claim
+      // Rollback the claim
+      await supabaseAdmin
+        .from("items")
+        .update({ claimed_at: null })
+        .eq("id", id);
+      
+      return new Response("Failed to send confirmation email. Please try again.", { status: 500 });
     }
 
-    return Response.json({ ok: true, item: data.item });
-  } catch (e: any) {
-    return new Response(e?.message ?? "Internal Error", { status: 500 });
+    // Parents notification (item only) - Less critical, can fail
+    if (recipients.length) {
+      try {
+        const parentTemplate = emailTemplates.parentNotification(data.item);
+        const parentResult = await resend.emails.send({
+          from, 
+          to: recipients,
+          subject: parentTemplate.subject,
+          text: parentTemplate.text,
+          html: parentTemplate.html
+        });
+        
+        if (parentResult.error) {
+          console.warn("Parent notification email failed:", parentResult.error);
+        } else {
+          console.log("Parent notification email sent successfully to:", recipients);
+        }
+      } catch (parentEmailError) {
+        console.warn("Parent notification email failed:", parentEmailError);
+        // Don't fail the entire request for parent notification
+      }
+    }
+
+    // Log successful claim
+    console.log(`Item "${data.item}" successfully claimed by ${email} at ${new Date().toISOString()}`);
+
+    return Response.json({ 
+      ok: true, 
+      item: data.item,
+      emailSent: donorEmailSent 
+    });
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : "Internal Error";
+    console.error("Claim API error:", e);
+    return new Response(errorMessage, { status: 500 });
   }
 }

@@ -1,36 +1,167 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Baby in Need - Geschenke-App
 
-## Getting Started
+Eine Next.js-App für werdende Eltern, um Geschenke zu verwalten und zu reservieren.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- ✅ Geschenke hinzufügen und verwalten
+- ✅ Einfache Reservierung ohne Login
+- ✅ **Automatische E-Mail-Bestätigungen für Schenkende**
+- ✅ Benachrichtigungen für werdende Eltern
+- ✅ Responsive Design
+- ✅ Echtzeit-Updates
+
+## 📧 E-Mail-Sicherheit & Bestätigungen
+
+### Kritische Sicherheitsmaßnahmen
+
+Die App implementiert mehrere Sicherheitsebenen, um sicherzustellen, dass **jeder Schenkende definitiv eine Bestätigungsmail erhält**:
+
+1. **Rollback bei E-Mail-Fehlern**: Wenn die Bestätigungsmail fehlschlägt, wird die Reservierung automatisch rückgängig gemacht
+2. **E-Mail-Validierung**: E-Mail-Adressen werden vor dem Versand validiert
+3. **Fehlerbehandlung**: Umfassende Fehlerbehandlung und Logging
+4. **Admin-Überwachung**: Admins können den E-Mail-Service testen und überwachen
+5. **Professionelle Templates**: HTML-E-Mails mit Fallback auf Text-Version
+
+### E-Mail-Flow
+
+```
+Schenkender reserviert → E-Mail wird gesendet → Reservierung bestätigt
+                    ↓
+                E-Mail fehlschlägt → Reservierung wird rückgängig gemacht
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🔧 Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Repository klonen**
+   ```bash
+   git clone [repository-url]
+   cd baby-in-need-4
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Abhängigkeiten installieren**
+   ```bash
+   npm install
+   ```
 
-## Learn More
+3. **Umgebungsvariablen konfigurieren**
+   ```bash
+   cp .env.example .env.local
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+## ⚙️ Umgebungsvariablen
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Erforderlich
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-## Deploy on Vercel
+# E-Mail (Resend)
+RESEND_API_KEY=your_resend_api_key
+ADMIN_CODE=your_admin_secret_code
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Optional
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# E-Mail-Einstellungen
+NOTIFY_FROM=your_custom_from_email@domain.com
+RECIPIENTS_TO=parent1@email.com,parent2@email.com
+
+# Standard: "Baby in Need <onboarding@resend.dev>"
+# Standard: Leer (wird aus Datenbank geladen)
+```
+
+## 📧 E-Mail-Service (Resend)
+
+Die App verwendet [Resend](https://resend.com) für zuverlässige E-Mail-Zustellung:
+
+1. **Konto erstellen** bei [resend.com](https://resend.com)
+2. **API-Key generieren**
+3. **Domain verifizieren** (optional, aber empfohlen)
+4. **API-Key in `.env.local` eintragen**
+
+### E-Mail-Templates
+
+- **Schenkende**: Professionelle Bestätigungsmail mit HTML-Design
+- **Eltern**: Benachrichtigung über neue Reservierungen
+- **Fallback**: Text-Version für alle E-Mail-Clients
+
+## 🛡️ Admin-Funktionen
+
+### Admin aktivieren
+1. Admin-Button klicken
+2. Admin-Code eingeben (aus Umgebungsvariablen)
+3. Vollzugriff auf alle Funktionen
+
+### E-Mail-Überwachung
+- **Status prüfen**: E-Mail-Service testen
+- **Test-E-Mail senden**: Bestätigungsmail testen
+- **Einstellungen verwalten**: Eltern-E-Mails konfigurieren
+
+## 🚀 Deployment
+
+### Vercel (Empfohlen)
+```bash
+npm run build
+vercel --prod
+```
+
+### Andere Plattformen
+```bash
+npm run build
+npm start
+```
+
+## 📊 Datenbank-Schema
+
+```sql
+-- Items-Tabelle
+CREATE TABLE items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  item TEXT NOT NULL,
+  url TEXT,
+  price TEXT,
+  size TEXT,
+  notes TEXT,
+  claimed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Konfiguration
+CREATE TABLE config (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL
+);
+```
+
+## 🔍 Troubleshooting
+
+### E-Mails werden nicht gesendet
+1. **Resend API-Key prüfen** in Admin-UI
+2. **Domain-Verifizierung** bei Resend
+3. **Logs prüfen** in der Konsole
+4. **Test-E-Mail senden** über Admin-UI
+
+### Reservierung funktioniert nicht
+1. **E-Mail-Validierung** prüfen
+2. **Supabase-Verbindung** testen
+3. **Admin-Code** korrekt eingeben
+
+## 📝 Lizenz
+
+MIT License - siehe LICENSE-Datei
+
+## 🤝 Beitragen
+
+1. Fork erstellen
+2. Feature-Branch erstellen
+3. Änderungen committen
+4. Pull Request erstellen
+
+---
+
+**Wichtig**: Diese App stellt sicher, dass jeder Schenkende eine Bestätigungsmail erhält. Bei E-Mail-Fehlern werden Reservierungen automatisch rückgängig gemacht.

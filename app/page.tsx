@@ -13,12 +13,15 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [adminCode, setAdminCode] = useState<string | null>(null);
   const [parentEmails, setParentEmails] = useState("");
+  const [emailStatus, setEmailStatus] = useState<{ valid: boolean; message: string } | null>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const [testItem, setTestItem] = useState("Test-Geschenk");
 
   const open = useMemo(() => items.filter(i => !i.claimed_at), [items]);
   const reserved = useMemo(() => items.filter(i => !!i.claimed_at), [items]);
 
   useEffect(() => {
-    let sub: any;
+    let sub: ReturnType<typeof supabaseClient.channel> | null = null;
     (async () => {
       setLoading(true);
       const { data } = await supabaseClient.from("items").select("*").order("created_at", { ascending: false });
@@ -41,13 +44,43 @@ export default function Page() {
   async function claim(id: string) {
     const email = prompt("Deine E-Mail (für die Bestätigung):")?.trim();
     if (!email) return;
-    const res = await fetch("/api/claim", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, email }),
-    });
-    if (res.ok) alert("Reserviert – danke! Bestätigung per E-Mail ist unterwegs.");
-    else if (res.status === 409) alert("Leider schon reserviert.");
-    else alert("Ups – da ging etwas schief.");
+    
+    // Show loading state
+    const claimButton = document.querySelector(`[data-item-id="${id}"] button`) as HTMLButtonElement | null;
+    if (claimButton) {
+      claimButton.textContent = "Wird reserviert...";
+      claimButton.disabled = true;
+    }
+    
+    try {
+      const res = await fetch("/api/claim", {
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, email }),
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        if (result.emailSent) {
+          alert("✅ Reservierung erfolgreich! Bestätigungsmail wurde an " + email + " gesendet.");
+        } else {
+          alert("⚠️ Reservierung erfolgreich, aber E-Mail-Versand fehlgeschlagen. Bitte kontaktiere die Eltern.");
+        }
+      } else if (res.status === 409) {
+        alert("❌ Leider schon reserviert.");
+      } else {
+        const errorText = await res.text();
+        alert("❌ Fehler: " + errorText);
+      }
+    } catch {
+      alert("❌ Netzwerkfehler. Bitte versuche es erneut.");
+    } finally {
+      // Restore button state
+      if (claimButton) {
+        claimButton.textContent = "Ich schenke das";
+        claimButton.disabled = false;
+      }
+    }
   }
 
   async function addItem(form: FormData) {
@@ -96,6 +129,74 @@ export default function Page() {
     if (res.ok) alert("Gespeichert."); else alert("Speichern fehlgeschlagen.");
   }
 
+  async function checkEmailStatus() {
+    const code = adminCode ?? ""; if (!code) return alert("Admin-Code fehlt.");
+    
+    try {
+      const res = await fetch("/api/admin/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-code": code },
+        body: JSON.stringify({ action: "status" }),
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) {
+          setEmailStatus({ 
+            valid: true, 
+            message: `✅ E-Mail-Service funktioniert (${result.domains} Domains verfügbar)` 
+          });
+        } else {
+          setEmailStatus({ 
+            valid: false, 
+            message: `❌ E-Mail-Service Problem: ${result.error}` 
+          });
+        }
+      } else {
+        setEmailStatus({ 
+          valid: false, 
+          message: "❌ Konnte E-Mail-Status nicht prüfen" 
+        });
+      }
+    } catch {
+      setEmailStatus({ 
+        valid: false, 
+        message: "❌ Netzwerkfehler beim Prüfen des E-Mail-Status" 
+      });
+    }
+  }
+
+  async function sendTestEmail() {
+    const code = adminCode ?? ""; if (!code) return alert("Admin-Code fehlt.");
+    if (!testEmail || !testItem) return alert("Bitte E-Mail und Test-Item eingeben.");
+    
+    try {
+      const res = await fetch("/api/admin/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-code": code },
+        body: JSON.stringify({ 
+          action: "test", 
+          email: testEmail, 
+          itemName: testItem 
+        }),
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) {
+          alert(`✅ Test-E-Mail erfolgreich gesendet an ${testEmail}`);
+          setTestEmail("");
+        } else {
+          alert(`❌ Test-E-Mail fehlgeschlagen: ${result.error}`);
+        }
+      } else {
+        alert("❌ Konnte Test-E-Mail nicht senden");
+      }
+    } catch {
+      alert("❌ Netzwerkfehler beim Senden der Test-E-Mail");
+    }
+  }
+
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-6">
       <header className="flex items-center justify-between">
@@ -115,6 +216,45 @@ export default function Page() {
 
       {adminCode && (
         <>
+          <section className="border rounded-lg p-4 space-y-3">
+            <div className="font-semibold">E-Mail-Überwachung</div>
+            <div className="flex gap-2">
+              <button onClick={checkEmailStatus} className="px-3 py-2 rounded bg-blue-600 text-white">
+                E-Mail-Status prüfen
+              </button>
+              {emailStatus && (
+                <div className={`px-3 py-2 rounded ${emailStatus.valid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {emailStatus.message}
+                </div>
+              )}
+            </div>
+            
+            <div className="border-t pt-3 mt-3">
+              <div className="text-sm mb-2">Test-E-Mail senden:</div>
+              <div className="grid gap-2 md:grid-cols-3">
+                <input 
+                  value={testEmail} 
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="border rounded px-3 py-2" 
+                  placeholder="test@example.com" 
+                />
+                <input 
+                  value={testItem} 
+                  onChange={(e) => setTestItem(e.target.value)}
+                  className="border rounded px-3 py-2" 
+                  placeholder="Test-Geschenk" 
+                />
+                <button 
+                  onClick={sendTestEmail} 
+                  className="px-3 py-2 rounded bg-green-600 text-white"
+                  disabled={!testEmail || !testItem}
+                >
+                  Test-E-Mail senden
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section className="border rounded-lg p-4 space-y-3">
             <div className="font-semibold">Einstellungen</div>
             <label className="text-sm">E-Mails der Beschenkten (Komma-getrennt)</label>
@@ -165,7 +305,7 @@ export default function Page() {
                   {i.notes && <div className="text-sm mt-1">{i.notes}</div>}
                 </div>
                 <div className="flex gap-2">
-                  <button className="px-3 py-1 rounded bg-black text-white" onClick={() => claim(i.id)}>Ich schenke das</button>
+                  <button className="px-3 py-1 rounded bg-black text-white" onClick={() => claim(i.id)} data-item-id={i.id}>Ich schenke das</button>
                   {adminCode && <button className="px-3 py-1 rounded border" onClick={() => removeItem(i.id)}>Löschen</button>}
                 </div>
               </li>
