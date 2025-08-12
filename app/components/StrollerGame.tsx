@@ -79,8 +79,10 @@ export default function StrollerGame() {
     
     let currentPos = { ...startPos };
     let direction = { x: 1, y: 0 };
+    let directionChanges = 0;
     
-    for (let i = 0; i < 20; i++) {
+    // Create longer, more interesting paths
+    for (let i = 0; i < 40; i++) {
       const nextPos = {
         x: currentPos.x + direction.x,
         y: currentPos.y + direction.y
@@ -94,10 +96,20 @@ export default function StrollerGame() {
         path.push(nextPos);
         currentPos = nextPos;
       } else {
+        // Change direction when hitting a wall or obstacle
         if (direction.x !== 0) {
           direction = { x: 0, y: 1 };
         } else {
           direction = { x: 1, y: 0 };
+        }
+        directionChanges++;
+        
+        // Add some randomness to make paths more interesting
+        if (directionChanges > 3 && Math.random() > 0.7) {
+          direction = { x: Math.random() > 0.5 ? 1 : -1, y: 0 };
+          if (Math.random() > 0.5) {
+            direction = { x: 0, y: Math.random() > 0.5 ? 1 : -1 };
+          }
         }
       }
     }
@@ -159,34 +171,48 @@ export default function StrollerGame() {
 
     // Add static obstacles (houses, trees, etc.)
     const staticObstacles: Array<{
-      type: 'house' | 'skyscraper' | 'tree' | 'trafficLight' | 'bikeRack' | 'wall' | 'hedge' | 'school' | 'hospital' | 'mall' | 'forest';
+      type: 'house' | 'skyscraper' | 'tree' | 'trafficLight' | 'bikeRack' | 'wall' | 'hedge' | 'school' | 'hospital' | 'mall' | 'forest' | 'park' | 'fountain' | 'statue' | 'bench' | 'lamp' | 'trashBin' | 'crossing';
       emoji: string;
       color: string;
       count: number;
       size: { width: number; height: number };
     }> = [
       // Houses (2x2)
-      { type: 'house', emoji: '🏠', color: 'bg-red-300', count: 6, size: { width: 2, height: 2 } },
+      { type: 'house', emoji: '🏠', color: 'bg-red-300', count: 8, size: { width: 2, height: 2 } },
       // Skyscrapers (2x2)
-      { type: 'skyscraper', emoji: '🏢', color: 'bg-blue-300', count: 4, size: { width: 2, height: 2 } },
+      { type: 'skyscraper', emoji: '🏢', color: 'bg-blue-300', count: 6, size: { width: 2, height: 2 } },
       // Trees (1x1)
-      { type: 'tree', emoji: '🌳', color: 'bg-green-300', count: 10, size: { width: 1, height: 1 } },
+      { type: 'tree', emoji: '🌳', color: 'bg-purple-300', count: 15, size: { width: 1, height: 1 } },
       // Traffic Lights (1x1)
-      { type: 'trafficLight', emoji: '🚦', color: 'bg-yellow-300', count: 4, size: { width: 1, height: 1 } },
+      { type: 'trafficLight', emoji: '🚦', color: 'bg-yellow-300', count: 6, size: { width: 1, height: 1 } },
       // Bike Racks (1x1)
-      { type: 'bikeRack', emoji: '🚲', color: 'bg-gray-300', count: 3, size: { width: 1, height: 1 } },
+      { type: 'bikeRack', emoji: '🚲', color: 'bg-gray-300', count: 5, size: { width: 1, height: 1 } },
       // Walls (1x1)
-      { type: 'wall', emoji: '🧱', color: 'bg-gray-400', count: 6, size: { width: 1, height: 1 } },
+      { type: 'wall', emoji: '🧱', color: 'bg-gray-400', count: 8, size: { width: 1, height: 1 } },
       // Hedges (1x1)
-      { type: 'hedge', emoji: '🌿', color: 'bg-green-400', count: 8, size: { width: 1, height: 1 } },
+      { type: 'hedge', emoji: '🌿', color: 'bg-purple-400', count: 12, size: { width: 1, height: 1 } },
       // School (2x2)
-      { type: 'school', emoji: '🏫', color: 'bg-purple-300', count: 1, size: { width: 2, height: 2 } },
+      { type: 'school', emoji: '🏫', color: 'bg-purple-300', count: 2, size: { width: 2, height: 2 } },
       // Hospital (2x2)
-      { type: 'hospital', emoji: '🏥', color: 'bg-red-400', count: 1, size: { width: 2, height: 2 } },
+      { type: 'hospital', emoji: '🏥', color: 'bg-red-400', count: 2, size: { width: 2, height: 2 } },
       // Mall (2x2)
-      { type: 'mall', emoji: '🏬', color: 'bg-pink-300', count: 1, size: { width: 2, height: 2 } },
+      { type: 'mall', emoji: '🏬', color: 'bg-pink-300', count: 2, size: { width: 2, height: 2 } },
       // Forest (2x2)
-      { type: 'forest', emoji: '🌲', color: 'bg-green-500', count: 1, size: { width: 2, height: 2 } }
+      { type: 'forest', emoji: '🌲', color: 'bg-purple-500', count: 2, size: { width: 2, height: 2 } },
+      // Park (2x2)
+      { type: 'park', emoji: '🌳', color: 'bg-purple-200', count: 1, size: { width: 2, height: 2 } },
+      // Fountain (1x1)
+      { type: 'fountain', emoji: '⛲', color: 'bg-blue-200', count: 3, size: { width: 1, height: 1 } },
+      // Statue (1x1)
+      { type: 'statue', emoji: '🗽', color: 'bg-yellow-200', count: 2, size: { width: 1, height: 1 } },
+      // Bench (1x1)
+      { type: 'bench', emoji: '🪑', color: 'bg-brown-200', count: 4, size: { width: 1, height: 1 } },
+      // Lamp (1x1)
+      { type: 'lamp', emoji: '💡', color: 'bg-yellow-100', count: 6, size: { width: 1, height: 1 } },
+      // Trash Bin (1x1)
+      { type: 'trashBin', emoji: '🗑️', color: 'bg-gray-200', count: 3, size: { width: 1, height: 1 } },
+      // Crossing (1x1)
+      { type: 'crossing', emoji: '🚶', color: 'bg-white', count: 4, size: { width: 1, height: 1 } }
     ];
 
     staticObstacles.forEach(obstacle => {
@@ -321,23 +347,31 @@ export default function StrollerGame() {
       const newVehicles = prev.vehicles.map(vehicle => {
         if (vehicle.currentPath.length <= 1) return vehicle;
         
-        const moveInterval = 1000 / vehicle.speed;
+        // Calculate movement based on speed and game time
+        const moveInterval = Math.max(100, 1000 / vehicle.speed);
         const shouldMove = (prev.gameTime % moveInterval) < GAME_SPEED;
         
         if (!shouldMove) return vehicle;
         
         let newPathIndex = vehicle.pathIndex + 1;
+        
+        // If reached end of path, continue from beginning (continuous loop)
         if (newPathIndex >= vehicle.currentPath.length) {
           newPathIndex = 0;
         }
         
         const newPos = vehicle.currentPath[newPathIndex];
         
-        return {
-          ...vehicle,
-          pos: newPos,
-          pathIndex: newPathIndex
-        };
+        // Ensure vehicle stays within game boundaries
+        if (newPos.x >= 0 && newPos.x < GAME_SIZE && newPos.y >= 0 && newPos.y < GAME_SIZE) {
+          return {
+            ...vehicle,
+            pos: newPos,
+            pathIndex: newPathIndex
+          };
+        }
+        
+        return vehicle;
       });
 
       return {
@@ -578,12 +612,12 @@ export default function StrollerGame() {
       <div className="text-center mb-4">
         {gameState.gameWon && (
           <div className="text-green-600 font-bold text-lg mb-2">
-            🎉 Gewonnen! Du hast das Ziel erreicht!
+            🎉 Herzlichen Glückwunsch! Du hast das Baby sicher nach Hause gebracht!
           </div>
         )}
         {gameState.gameOver && (
           <div className="text-red-600 font-bold text-lg mb-2">
-            💥 Game Over! Du bist gestoßen!
+            💥 Game Over! Kümmere dich besser um das Baby!
           </div>
         )}
                  {!gameState.gameStarted && !gameState.gameWon && !gameState.gameOver && (

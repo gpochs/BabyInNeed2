@@ -295,9 +295,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between">
             <div className="text-center sm:text-left mb-4 sm:mb-0">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                🍼 Baby in Need
-              </h1>
+                          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent drop-shadow-lg">
+              🍼 Baby in Need
+            </h1>
               <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
                 <span className="text-2xl">👶</span>
                 <span className="text-2xl">🍼</span>
@@ -442,14 +442,14 @@ export default function Home() {
                     onChange={(e) => setNewItem(prev => ({ ...prev, size: e.target.value }))}
                     className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
-                  <input
+                <input 
                     type="text"
                     placeholder="Farbe"
                     value={newItem.color}
                     onChange={(e) => setNewItem(prev => ({ ...prev, color: e.target.value }))}
                     className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                  <input 
+                />
+                <input 
                     type="text"
                     placeholder="Kategorie"
                     value={newItem.category}
@@ -499,8 +499,8 @@ export default function Home() {
         {/* Offene Items */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
-              🟢 Offen ({openItems.length})
+            <h2 className="text-3xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
+              🟣 Offen ({openItems.length})
             </h2>
             {openItems.length > 0 && (
               <div className="text-sm text-slate-500">
@@ -516,24 +516,24 @@ export default function Home() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {openItems.map((item) => (
-                <div key={item.id} className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all duration-300 group">
+                <div key={item.id} className="bg-white rounded-xl shadow-2xl border-2 border-slate-300 p-6 hover:shadow-3xl transition-all duration-300 group">
                   {/* Priority Badge */}
                   {item.priority && (
                     <div className="flex justify-between items-start mb-3">
                       <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                         item.priority === 'high' ? 'bg-red-100 text-red-800' :
                         item.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
+                        'bg-purple-100 text-purple-800'
                       }`}>
                         {item.priority === 'high' ? '🔥 Hoch' : 
-                         item.priority === 'medium' ? '⚡ Mittel' : '✅ Niedrig'}
+                         item.priority === 'medium' ? '⚡ Mittel' : '🟣 Niedrig'}
                       </div>
                       {item.category && (
                         <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-full text-xs">
                           {item.category}
                         </span>
                       )}
-              </div>
+                    </div>
                   )}
 
                   {/* Item Name */}
@@ -601,8 +601,8 @@ export default function Home() {
 
         {/* Reservierte Items */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-            🟡 Reserviert ({reservedItems.length})
+          <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3 drop-shadow-lg">
+            🟣 Reserviert ({reservedItems.length})
           </h2>
           
           {reservedItems.length === 0 ? (
@@ -612,17 +612,17 @@ export default function Home() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {reservedItems.map((item) => (
-                <div key={item.id} className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all duration-300 opacity-75">
+                <div key={item.id} className="bg-white rounded-xl shadow-2xl border-2 border-slate-300 p-6 hover:shadow-3xl transition-all duration-300 opacity-90">
                   {/* Priority Badge */}
                   {item.priority && (
                     <div className="flex justify-between items-start mb-3">
                       <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                         item.priority === 'high' ? 'bg-red-100 text-red-800' :
                         item.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
+                        'bg-purple-100 text-purple-800'
                       }`}>
                         {item.priority === 'high' ? '🔥 Hoch' : 
-                         item.priority === 'medium' ? '⚡ Mittel' : '✅ Niedrig'}
+                         item.priority === 'medium' ? '⚡ Mittel' : '🟣 Niedrig'}
                       </div>
                       {item.category && (
                         <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-full text-xs">
@@ -690,7 +690,7 @@ export default function Home() {
         {/* E-Mails der Beschenkten - Admin Only */}
         {adminMode && (
           <section className="mb-12">
-            <h2 className="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+            <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3 drop-shadow-lg">
               📧 E-Mails der Beschenkten
             </h2>
             <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
