@@ -10,11 +10,11 @@ interface Obstacle {
   id: string;
   type: 'house' | 'skyscraper' | 'tree' | 'trafficLight' | 'bikeRack' | 'wall' | 'hedge' | 'street' | 'school' | 'hospital' | 'mall' | 'forest';
   pos: Position;
-  size: { width: number; height: number }; // New: support for larger obstacles
+  size: { width: number; height: number };
   emoji: string;
   color: string;
   isStreet: boolean;
-  isGoal?: boolean; // New: mark goal house
+  isGoal?: boolean;
 }
 
 interface Vehicle {
@@ -22,7 +22,7 @@ interface Vehicle {
   type: 'car' | 'motorcycle' | 'scooter' | 'bicycle';
   pos: Position;
   direction: Position;
-  speed: number; // fields per second
+  speed: number;
   emoji: string;
   color: string;
   currentPath: Position[];
@@ -41,14 +41,14 @@ interface GameState {
   gameTime: number;
 }
 
-const GAME_SIZE = 30;
-const CELL_SIZE = 20; // Smaller cells for 30x30 grid
-const GAME_SPEED = 50; // ms between updates
+const GAME_SIZE = 25; // Reduced for mobile compatibility
+const CELL_SIZE = 24; // Slightly larger cells for 25x25 grid
+const GAME_SPEED = 50;
 
 export default function StrollerGame() {
   const [gameState, setGameState] = useState<GameState>({
-    strollerPos: { x: GAME_SIZE - 3, y: GAME_SIZE - 3 }, // Start far from goal
-    goalPos: { x: 1, y: 1 }, // Goal in top-left corner
+    strollerPos: { x: GAME_SIZE - 3, y: GAME_SIZE - 3 },
+    goalPos: { x: 1, y: 1 },
     obstacles: [],
     vehicles: [],
     gameWon: false,
@@ -58,30 +58,42 @@ export default function StrollerGame() {
     gameTime: 0
   });
 
+  const [isMobile, setIsMobile] = useState(false);
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Generate city layout with streets and obstacles
   const generateCityLayout = useCallback(() => {
     const obstacles: Obstacle[] = [];
     const vehicles: Vehicle[] = [];
     
-    // Create expanded street network (more streets for better connectivity)
+    // Create street network (adjusted for 25x25)
     const horizontalStreets = [
-      { y: 3, startX: 0, endX: GAME_SIZE - 1 },
-      { y: 8, startX: 0, endX: GAME_SIZE - 1 },
-      { y: 13, startX: 0, endX: GAME_SIZE - 1 },
+      { y: 2, startX: 0, endX: GAME_SIZE - 1 },
+      { y: 6, startX: 0, endX: GAME_SIZE - 1 },
+      { y: 10, startX: 0, endX: GAME_SIZE - 1 },
+      { y: 14, startX: 0, endX: GAME_SIZE - 1 },
       { y: 18, startX: 0, endX: GAME_SIZE - 1 },
-      { y: 23, startX: 0, endX: GAME_SIZE - 1 },
-      { y: 28, startX: 0, endX: GAME_SIZE - 1 }
+      { y: 22, startX: 0, endX: GAME_SIZE - 1 }
     ];
     
     const verticalStreets = [
-      { x: 3, startY: 0, endY: GAME_SIZE - 1 },
-      { x: 8, startY: 0, endY: GAME_SIZE - 1 },
-      { x: 13, startY: 0, endY: GAME_SIZE - 1 },
+      { x: 2, startY: 0, endY: GAME_SIZE - 1 },
+      { x: 6, startY: 0, endY: GAME_SIZE - 1 },
+      { x: 10, startY: 0, endY: GAME_SIZE - 1 },
+      { x: 14, startY: 0, endY: GAME_SIZE - 1 },
       { x: 18, startY: 0, endY: GAME_SIZE - 1 },
-      { x: 23, startY: 0, endY: GAME_SIZE - 1 },
-      { x: 28, startY: 0, endY: GAME_SIZE - 1 }
+      { x: 22, startY: 0, endY: GAME_SIZE - 1 }
     ];
 
     // Add horizontal streets
@@ -122,7 +134,7 @@ export default function StrollerGame() {
           type: 'house',
           pos: { x, y },
           size: { width: 2, height: 2 },
-          emoji: x === 0 && y === 0 ? '🏠' : '', // Only show emoji on first cell
+          emoji: x === 0 && y === 0 ? '🏠' : '',
           color: 'bg-green-500',
           isStreet: false,
           isGoal: true
@@ -130,18 +142,18 @@ export default function StrollerGame() {
       }
     }
 
-    // Add buildings and obstacles (avoiding streets and goal area)
+    // Add buildings and obstacles (adjusted counts for 25x25)
     const buildingTypes = [
-      { type: 'house' as const, count: 16, emoji: '🏠', color: 'bg-red-600' }, // Doubled
-      { type: 'skyscraper' as const, count: 12, emoji: '🏢', color: 'bg-blue-600' }, // Doubled
-      { type: 'tree' as const, count: 24, emoji: '🌳', color: 'bg-green-600' }, // Doubled
-      { type: 'trafficLight' as const, count: 8, emoji: '🚦', color: 'bg-yellow-500' }, // Doubled
-      { type: 'bikeRack' as const, count: 6, emoji: '🚲', color: 'bg-gray-500' }, // Doubled
-      { type: 'wall' as const, count: 10, emoji: '🧱', color: 'bg-gray-700' }, // Doubled
-      { type: 'hedge' as const, count: 14, emoji: '🌿', color: 'bg-green-500' }, // Doubled
-      { type: 'school' as const, count: 1, emoji: '🏫', color: 'bg-purple-600' }, // New
-      { type: 'hospital' as const, count: 1, emoji: '🏥', color: 'bg-red-500' }, // New
-      { type: 'mall' as const, count: 1, emoji: '🏬', color: 'bg-pink-500' }, // New
+      { type: 'house' as const, count: 12, emoji: '🏠', color: 'bg-red-600' },
+      { type: 'skyscraper' as const, count: 8, emoji: '🏢', color: 'bg-blue-600' },
+      { type: 'tree' as const, count: 16, emoji: '🌳', color: 'bg-green-600' },
+      { type: 'trafficLight' as const, count: 6, emoji: '🚦', color: 'bg-yellow-500' },
+      { type: 'bikeRack' as const, count: 4, emoji: '🚲', color: 'bg-gray-500' },
+      { type: 'wall' as const, count: 8, emoji: '🧱', color: 'bg-gray-700' },
+      { type: 'hedge' as const, count: 10, emoji: '🌿', color: 'bg-green-500' },
+      { type: 'school' as const, count: 1, emoji: '🏫', color: 'bg-purple-600' },
+      { type: 'hospital' as const, count: 1, emoji: '🏥', color: 'bg-red-500' },
+      { type: 'mall' as const, count: 1, emoji: '🏬', color: 'bg-pink-500' },
     ];
 
     buildingTypes.forEach(({ type, count, emoji, color }) => {
@@ -157,13 +169,9 @@ export default function StrollerGame() {
           attempts++;
         } while (
           attempts < 100 && (
-            // Don't place on stroller start position
             (pos.x >= GAME_SIZE - 3 && pos.y >= GAME_SIZE - 3) ||
-            // Don't place on goal area
             (pos.x < 2 && pos.y < 2) ||
-            // Don't place on existing obstacles
             obstacles.some(obs => obs.pos.x === pos.x && obs.pos.y === pos.y) ||
-            // Don't place on streets
             obstacles.some(obs => obs.isStreet && obs.pos.x === pos.x && obs.pos.y === pos.y)
           )
         );
@@ -182,7 +190,7 @@ export default function StrollerGame() {
       }
     });
 
-    // Add FOREST (2x2) - find suitable location
+    // Add FOREST (2x2)
     let forestPos: Position;
     let forestAttempts = 0;
     do {
@@ -193,11 +201,8 @@ export default function StrollerGame() {
       forestAttempts++;
     } while (
       forestAttempts < 100 && (
-        // Don't place on stroller start position
         (forestPos.x >= GAME_SIZE - 3 && forestPos.y >= GAME_SIZE - 3) ||
-        // Don't place on goal area
         (forestPos.x < 2 && forestPos.y < 2) ||
-        // Don't place on existing obstacles or streets
         obstacles.some(obs => 
           (obs.pos.x === forestPos.x && obs.pos.y === forestPos.y) ||
           (obs.pos.x === forestPos.x + 1 && obs.pos.y === forestPos.y) ||
@@ -208,7 +213,6 @@ export default function StrollerGame() {
     );
 
     if (forestAttempts < 100) {
-      // Add forest as 2x2 obstacle
       for (let x = 0; x < 2; x++) {
         for (let y = 0; y < 2; y++) {
           obstacles.push({
@@ -216,7 +220,7 @@ export default function StrollerGame() {
             type: 'forest',
             pos: { x: forestPos.x + x, y: forestPos.y + y },
             size: { width: 2, height: 2 },
-            emoji: x === 0 && y === 0 ? '🌲' : '', // Only show emoji on first cell
+            emoji: x === 0 && y === 0 ? '🌲' : '',
             color: 'bg-green-700',
             isStreet: false
           });
@@ -224,7 +228,7 @@ export default function StrollerGame() {
       }
     }
 
-    // Add vehicles that move on streets
+    // Add vehicles
     const vehicleTypes = [
       { type: 'car' as const, count: 2, speed: 4, emoji: '🚗', color: 'bg-red-500' },
       { type: 'motorcycle' as const, count: 2, speed: 3, emoji: '🏍️', color: 'bg-orange-500' },
@@ -234,14 +238,11 @@ export default function StrollerGame() {
 
     vehicleTypes.forEach(({ type, count, speed, emoji, color }) => {
       for (let i = 0; i < count; i++) {
-        // Find a street position
         const streetPositions = obstacles.filter(obs => obs.isStreet);
         if (streetPositions.length === 0) continue;
 
         const randomStreet = streetPositions[Math.floor(Math.random() * streetPositions.length)];
         const pos = { ...randomStreet.pos };
-
-        // Create path along streets
         const path = createVehiclePath(pos, obstacles);
         
         vehicles.push({
@@ -261,22 +262,20 @@ export default function StrollerGame() {
     return { obstacles, vehicles };
   }, []);
 
-  // Create path for vehicles to follow along streets
+  // Create path for vehicles
   const createVehiclePath = useCallback((startPos: Position, obstacles: Obstacle[]): Position[] => {
     const path: Position[] = [startPos];
     const streets = obstacles.filter(obs => obs.isStreet);
     
-    // Simple path: move along streets in a pattern
     let currentPos = { ...startPos };
-    let direction = { x: 1, y: 0 }; // Start moving right
+    let direction = { x: 1, y: 0 };
     
-    for (let i = 0; i < 30; i++) { // Longer paths
+    for (let i = 0; i < 25; i++) {
       const nextPos = {
         x: currentPos.x + direction.x,
         y: currentPos.y + direction.y
       };
       
-      // Check if next position is a street
       const isStreet = streets.some(street => 
         street.pos.x === nextPos.x && street.pos.y === nextPos.y
       );
@@ -285,7 +284,6 @@ export default function StrollerGame() {
         path.push(nextPos);
         currentPos = nextPos;
       } else {
-        // Change direction
         if (direction.x !== 0) {
           direction = { x: 0, y: 1 };
         } else {
@@ -297,21 +295,20 @@ export default function StrollerGame() {
     return path;
   }, []);
 
-  // Move vehicles along their paths
+  // Move vehicles
   const moveVehicles = useCallback(() => {
     setGameState(prev => {
       const newVehicles = prev.vehicles.map(vehicle => {
         if (vehicle.currentPath.length <= 1) return vehicle;
         
-        // Move vehicle along path based on speed
-        const moveInterval = 1000 / vehicle.speed; // ms between moves
+        const moveInterval = 1000 / vehicle.speed;
         const shouldMove = (prev.gameTime % moveInterval) < GAME_SPEED;
         
         if (!shouldMove) return vehicle;
         
         let newPathIndex = vehicle.pathIndex + 1;
         if (newPathIndex >= vehicle.currentPath.length) {
-          newPathIndex = 0; // Loop back to start
+          newPathIndex = 0;
         }
         
         const newPos = vehicle.currentPath[newPathIndex];
@@ -335,7 +332,7 @@ export default function StrollerGame() {
     const { obstacles, vehicles } = generateCityLayout();
     setGameState(prev => ({
       ...prev,
-      strollerPos: { x: GAME_SIZE - 3, y: GAME_SIZE - 3 }, // Start far from goal
+      strollerPos: { x: GAME_SIZE - 3, y: GAME_SIZE - 3 },
       obstacles,
       vehicles,
       gameWon: false,
@@ -361,7 +358,7 @@ export default function StrollerGame() {
     }));
   }, []);
 
-  // Handle keyboard input to control stroller
+  // Handle stroller control
   const handleStrollerControl = useCallback((dx: number, dy: number) => {
     if (!gameState.gameStarted || gameState.gameWon || gameState.gameOver) return;
 
@@ -371,21 +368,18 @@ export default function StrollerGame() {
         y: prev.strollerPos.y + dy
       };
 
-      // Check boundaries
       if (newPos.x < 0 || newPos.x >= GAME_SIZE || newPos.y < 0 || newPos.y >= GAME_SIZE) {
         return prev;
       }
 
-      // Check if new position is blocked by obstacle (EXCEPT goal house and streets)
       const isBlocked = prev.obstacles.some(obs => 
         !obs.isStreet && !obs.isGoal && obs.pos.x === newPos.x && obs.pos.y === newPos.y
       );
 
       if (isBlocked) {
-        return { ...prev, gameOver: true }; // Game over if hitting obstacle
+        return { ...prev, gameOver: true };
       }
 
-      // Check collision with vehicles
       const vehicleCollision = prev.vehicles.some(vehicle => 
         vehicle.pos.x === newPos.x && vehicle.pos.y === newPos.y
       );
@@ -394,7 +388,6 @@ export default function StrollerGame() {
         return { ...prev, gameOver: true };
       }
 
-      // Check if reached goal (any part of the 2x2 goal house)
       const isInGoal = newPos.x < 2 && newPos.y < 2;
       if (isInGoal) {
         return { 
@@ -404,7 +397,6 @@ export default function StrollerGame() {
         };
       }
 
-      // Move stroller
       return {
         ...prev,
         strollerPos: newPos,
@@ -456,6 +448,26 @@ export default function StrollerGame() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleStrollerControl, gameState.gameStarted, gameState.gameWon, gameState.gameOver]);
 
+  // Touch controls for mobile
+  const handleTouchMove = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
+    if (!gameState.gameStarted || gameState.gameWon || gameState.gameOver) return;
+
+    switch (direction) {
+      case 'up':
+        handleStrollerControl(0, -1);
+        break;
+      case 'down':
+        handleStrollerControl(0, 1);
+        break;
+      case 'left':
+        handleStrollerControl(-1, 0);
+        break;
+      case 'right':
+        handleStrollerControl(1, 0);
+        break;
+    }
+  }, [handleStrollerControl, gameState.gameStarted, gameState.gameWon, gameState.gameOver]);
+
   // Render game cell
   const renderCell = (x: number, y: number) => {
     const isStroller = x === gameState.strollerPos.x && y === gameState.strollerPos.y;
@@ -467,10 +479,10 @@ export default function StrollerGame() {
     let cellClass = 'border border-slate-300';
 
     if (isStroller) {
-      cellContent = '🛒👶'; // Stroller with baby
-      cellClass = 'bg-blue-500 text-white border-blue-600 animate-pulse text-xs';
+      cellContent = '🛒👶';
+      // NEON PINK with glow effect and pulse animation
+      cellClass = 'bg-pink-400 text-white border-pink-500 animate-pulse text-xs shadow-lg shadow-pink-500/50';
     } else if (isInGoal) {
-      // Goal house with "ZIEL" label and sparkle animation
       if (x === 0 && y === 0) {
         cellContent = '🏠';
         cellClass = 'bg-green-500 text-white border-green-600 animate-bounce text-xs font-bold';
@@ -505,30 +517,28 @@ export default function StrollerGame() {
 
   if (!gameState.gameStarted) {
     return (
-      <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200 text-center">
-        <h2 className="text-3xl font-bold text-slate-800 mb-4 flex items-center justify-center gap-3">
+      <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 text-center">
+        <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center justify-center gap-3">
           🏙️ Stadt-Labyrinth
         </h2>
-        <p className="text-slate-600 mb-6 max-w-md mx-auto">
+        <p className="text-slate-600 mb-4 max-w-md mx-auto text-sm">
           Führe den Kinderwagen mit dem Baby sicher durch die Stadt zum ZIEL-Haus! 
           Bewege dich auf den Straßen und vermeide den Verkehr.
         </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-blue-800 mb-2">🎯 Spielregeln:</h3>
-          <ul className="text-sm text-blue-700 text-left space-y-1">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <h3 className="font-semibold text-blue-800 mb-2 text-sm">🎯 Spielregeln:</h3>
+          <ul className="text-xs text-blue-700 text-left space-y-1">
             <li>• 🛒👶 Kinderwagen mit Baby steuern</li>
-            <li>• ⬆️⬇️⬅️➡️ Pfeiltasten zum Bewegen</li>
+            <li>• ⬆️⬇️⬅️➡️ Pfeiltasten oder Touch-Steuerung</li>
             <li>• 🛣️ Bewege dich auf Straßen und in freien Bereichen</li>
             <li>• 🚗🏍️🛴🚲 Vermeide den Verkehr</li>
             <li>• 🏠🏠 Ziel: Das grüne ZIEL-Haus erreichen</li>
-            <li>• 🏫🏥🏬 Neue Gebäude: Schule, Krankenhaus, Einkaufszentrum</li>
-            <li>• 🌲🌲 Wald als 2x2 Hindernis</li>
             <li>• ⚠️ Berühre KEINE Hindernisse - nur das Zielhaus!</li>
           </ul>
         </div>
         <button
           onClick={startGame}
-          className="px-8 py-4 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+          className="px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300"
         >
           🚀 Spiel starten
         </button>
@@ -537,12 +547,12 @@ export default function StrollerGame() {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200">
-      <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold text-slate-800 mb-2 flex items-center justify-center gap-3">
+    <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+      <div className="text-center mb-4">
+        <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center justify-center gap-3">
           🏙️ Stadt-Labyrinth
         </h2>
-        <div className="flex items-center justify-center gap-6 text-lg">
+        <div className="flex items-center justify-center gap-4 text-base flex-wrap">
           <span className="text-slate-600">Punkte: <span className="font-bold text-indigo-600">{gameState.score}</span></span>
           <span className="text-slate-600">Zeit: <span className="font-bold text-orange-600">{Math.floor(gameState.gameTime / 1000)}s</span></span>
           <span className="text-slate-600">Ziel: <span className="font-bold text-green-600">🏠 ZIEL</span></span>
@@ -550,14 +560,14 @@ export default function StrollerGame() {
       </div>
 
       {/* Game Instructions */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <p className="text-blue-800 text-center font-medium">
-          🎯 Bewege den Kinderwagen (🛒👶) mit den Pfeiltasten sicher durch die Stadt zum ZIEL-Haus (🏠)!
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+        <p className="text-blue-800 text-center font-medium text-sm">
+          🎯 Bewege den Kinderwagen (🛒👶) sicher durch die Stadt zum ZIEL-Haus (🏠)!
         </p>
       </div>
 
       {/* Game Grid */}
-      <div className="flex justify-center mb-6 overflow-auto">
+      <div className="flex justify-center mb-4 overflow-auto">
         <div 
           className="grid gap-0 border-2 border-slate-400 rounded-lg overflow-hidden"
           style={{ 
@@ -571,16 +581,50 @@ export default function StrollerGame() {
         </div>
       </div>
 
+      {/* Mobile Touch Controls */}
+      {isMobile && !gameState.gameWon && !gameState.gameOver && (
+        <div className="flex justify-center mb-4">
+          <div className="grid grid-cols-3 gap-2">
+            <div></div>
+            <button
+              onClick={() => handleTouchMove('up')}
+              className="w-12 h-12 bg-indigo-500 text-white rounded-lg flex items-center justify-center text-xl shadow-md hover:bg-indigo-600 transition-colors"
+            >
+              ⬆️
+            </button>
+            <div></div>
+            <button
+              onClick={() => handleTouchMove('left')}
+              className="w-12 h-12 bg-indigo-500 text-white rounded-lg flex items-center justify-center text-xl shadow-md hover:bg-indigo-600 transition-colors"
+            >
+              ⬅️
+            </button>
+            <button
+              onClick={() => handleTouchMove('down')}
+              className="w-12 h-12 bg-indigo-500 text-white rounded-lg flex items-center justify-center text-xl shadow-md hover:bg-indigo-600 transition-colors"
+            >
+              ⬇️
+            </button>
+            <button
+              onClick={() => handleTouchMove('right')}
+              className="w-12 h-12 bg-indigo-500 text-white rounded-lg flex items-center justify-center text-xl shadow-md hover:bg-indigo-600 transition-colors"
+            >
+              ➡️
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Game Status */}
       {gameState.gameWon && (
         <div className="text-center">
-          <div className="text-6xl mb-4">🎉</div>
-          <h3 className="text-2xl font-bold text-green-600 mb-2">Gewonnen!</h3>
-          <p className="text-slate-600 mb-4">Du hast den Kinderwagen erfolgreich sicher zum ZIEL-Haus geführt!</p>
-          <p className="text-lg font-semibold text-indigo-600 mb-6">Punkte: {gameState.score} | Zeit: {Math.floor(gameState.gameTime / 1000)}s</p>
+          <div className="text-5xl mb-3">🎉</div>
+          <h3 className="text-xl font-bold text-green-600 mb-2">Gewonnen!</h3>
+          <p className="text-slate-600 mb-3 text-sm">Du hast den Kinderwagen erfolgreich sicher zum ZIEL-Haus geführt!</p>
+          <p className="text-base font-semibold text-indigo-600 mb-4">Punkte: {gameState.score} | Zeit: {Math.floor(gameState.gameTime / 1000)}s</p>
           <button
             onClick={resetGame}
-            className="px-6 py-3 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
+            className="px-5 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
           >
             🔄 Nochmal spielen
           </button>
@@ -589,13 +633,13 @@ export default function StrollerGame() {
 
       {gameState.gameOver && (
         <div className="text-center">
-          <div className="text-6xl mb-4">💥</div>
-          <h3 className="text-2xl font-bold text-red-600 mb-2">Game Over!</h3>
-          <p className="text-slate-600 mb-4">Der Kinderwagen ist mit einem Fahrzeug kollidiert!</p>
-          <p className="text-lg font-semibold text-indigo-600 mb-6">Punkte: {gameState.score} | Zeit: {Math.floor(gameState.gameTime / 1000)}s</p>
+          <div className="text-5xl mb-3">💥</div>
+          <h3 className="text-xl font-bold text-red-600 mb-2">Game Over!</h3>
+          <p className="text-slate-600 mb-3 text-sm">Der Kinderwagen ist mit einem Hindernis oder Fahrzeug kollidiert!</p>
+          <p className="text-base font-semibold text-indigo-600 mb-4">Punkte: {gameState.score} | Zeit: {Math.floor(gameState.gameTime / 1000)}s</p>
           <button
             onClick={resetGame}
-            className="px-6 py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
+            className="px-5 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
           >
             🔄 Nochmal versuchen
           </button>
@@ -605,15 +649,17 @@ export default function StrollerGame() {
       {/* Game Controls */}
       {!gameState.gameWon && !gameState.gameOver && (
         <div className="text-center">
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 inline-block">
-            <p className="text-slate-600 font-medium mb-2">Steuerung:</p>
-            <div className="flex items-center justify-center gap-2 text-2xl">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 inline-block">
+            <p className="text-slate-600 font-medium mb-2 text-sm">Steuerung:</p>
+            <div className="flex items-center justify-center gap-2 text-xl">
               <span>⬆️</span>
               <span>⬅️</span>
               <span>⬇️</span>
               <span>➡️</span>
             </div>
-                         <p className="text-xs text-slate-500 mt-2">Bewege dich auf Straßen und in freien Bereichen!</p>
+            <p className="text-xs text-slate-500 mt-2">
+              {isMobile ? 'Touch-Buttons oder Pfeiltasten' : 'Pfeiltasten'}
+            </p>
           </div>
         </div>
       )}

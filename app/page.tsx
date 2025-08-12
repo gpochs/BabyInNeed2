@@ -1,369 +1,388 @@
 ﻿"use client";
-import { useEffect, useMemo, useState } from "react";
-import { supabaseClient } from "@/lib/supabaseClient";
-import StrollerGame from "./components/StrollerGame";
+import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import StrollerGame from './components/StrollerGame';
 
-type Item = {
-  id: string; item: string; url?: string; price?: string; size?: string; notes?: string;
-  claimed_at?: string | null; created_at?: string;
-};
-const ADMIN_FLAG = "bin_admin_code";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-export default function Page() {
+interface Item {
+  id: number;
+  name: string;
+  price: string;
+  size: string;
+  notes: string;
+  link?: string; // New: optional link field
+  status: 'offen' | 'reserviert';
+  created_at: string;
+}
+
+export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [adminCode, setAdminCode] = useState<string | null>(null);
-  const [parentEmails, setParentEmails] = useState("");
+  const [adminMode, setAdminMode] = useState(false);
+  const [adminCode, setAdminCode] = useState('');
+  const [showGame, setShowGame] = useState(false); // New: toggle for game
+  const [emailRecipients, setEmailRecipients] = useState('');
+  const [configLoading, setConfigLoading] = useState(false);
 
-  const open = useMemo(() => items.filter(i => !i.claimed_at), [items]);
-  const reserved = useMemo(() => items.filter(i => !!i.claimed_at), [items]);
+  // Load items
+  const loadItems = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  useEffect(() => {
-    let sub: ReturnType<typeof supabaseClient.channel> | null = null;
-    (async () => {
-      setLoading(true);
-      const { data } = await supabaseClient.from("items").select("*").order("created_at", { ascending: false });
-      setItems((data ?? []) as Item[]); setLoading(false);
-
-      const conf = await supabaseClient.from("config").select("value").eq("key", "recipients").maybeSingle();
-      if (conf.data?.value?.emails) setParentEmails(conf.data.value.emails);
-
-      sub = supabaseClient
-        .channel("items-stream")
-        .on("postgres_changes", { event: "*", schema: "public", table: "items" }, async () => {
-          const { data } = await supabaseClient.from("items").select("*").order("created_at", { ascending: false });
-          setItems((data ?? []) as Item[]);
-        }).subscribe();
-    })();
-    const saved = localStorage.getItem(ADMIN_FLAG); if (saved) setAdminCode(saved);
-    return () => { if (sub) supabaseClient.removeChannel(sub); };
+      if (error) throw error;
+      setItems(data || []);
+    } catch (error) {
+      console.error('Error loading items:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  async function claim(id: string) {
-    const email = prompt("Deine E-Mail (für die Bestätigung):")?.trim();
-    if (!email) return;
-    
-    // Show loading state
-    const claimButton = document.querySelector(`[data-item-id="${id}"] button`) as HTMLButtonElement | null;
-    if (claimButton) {
-      claimButton.textContent = "Wird reserviert...";
-      claimButton.disabled = true;
-    }
-    
+  // Load email recipients from config
+  const loadEmailConfig = useCallback(async () => {
     try {
-      const res = await fetch("/api/claim", {
-        method: "POST", 
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, email }),
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        if (result.emailSent) {
-          alert("✅ Reservierung erfolgreich! Bestätigungsmail wurde an " + email + " gesendet.");
-        } else {
-          alert("⚠️ Reservierung erfolgreich, aber E-Mail-Versand fehlgeschlagen. Bitte kontaktiere die Eltern.");
-        }
-      } else if (res.status === 409) {
-        alert("❌ Leider schon reserviert.");
-      } else {
-        const errorText = await res.text();
-        alert("❌ Fehler: " + errorText);
+      const { data, error } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', 'email_recipients')
+        .single();
+
+      if (!error && data) {
+        setEmailRecipients(data.value);
       }
-    } catch {
-      alert("❌ Netzwerkfehler. Bitte versuche es erneut.");
-    } finally {
-      // Restore button state
-      if (claimButton) {
-        claimButton.textContent = "Ich schenke das";
-        claimButton.disabled = false;
-      }
+    } catch (error) {
+      console.error('Error loading email config:', error);
     }
+  }, []);
+
+  // Save email recipients to config
+  const saveEmailConfig = useCallback(async () => {
+    setConfigLoading(true);
+    try {
+      const { error } = await supabase
+        .from('config')
+        .upsert({ 
+          key: 'email_recipients', 
+          value: emailRecipients 
+        });
+
+      if (error) throw error;
+      alert('E-Mail-Empfänger gespeichert!');
+    } catch (error) {
+      console.error('Error saving email config:', error);
+      alert('Fehler beim Speichern der E-Mail-Empfänger!');
+    } finally {
+      setConfigLoading(false);
+    }
+  }, [emailRecipients]);
+
+  // Delete item
+  const deleteItem = useCallback(async (id: number) => {
+    if (!confirm('Möchtest du dieses Item wirklich löschen?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadItems();
+      alert('Item erfolgreich gelöscht!');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert('Fehler beim Löschen des Items!');
+    }
+  }, [loadItems]);
+
+  // Claim item
+  const claimItem = useCallback(async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update({ status: 'reserviert' })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadItems();
+      alert('Item erfolgreich reserviert!');
+    } catch (error) {
+      console.error('Error claiming item:', error);
+      alert('Fehler beim Reservieren des Items!');
+    }
+  }, [loadItems]);
+
+  // Load data on mount
+  useEffect(() => {
+    loadItems();
+    loadEmailConfig();
+  }, [loadItems, loadEmailConfig]);
+
+  // Check admin mode
+  useEffect(() => {
+    if (adminCode === process.env.NEXT_PUBLIC_ADMIN_CODE) {
+      setAdminMode(true);
+      setAdminCode('');
+    }
+  }, [adminCode]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Lade Items...</p>
+        </div>
+      </div>
+    );
   }
 
-  async function addItem(form: FormData) {
-    const code = adminCode ?? ""; if (!code) return alert("Admin-Code fehlt.");
-    const payload = {
-      item: String(form.get("item") ?? "").trim(),
-      url: String(form.get("url") ?? "").trim() || undefined,
-      price: String(form.get("price") ?? "").trim() || undefined,
-      size: String(form.get("size") ?? "").trim() || undefined,
-      notes: String(form.get("notes") ?? "").trim() || undefined,
-    };
-    if (!payload.item) return;
-    const res = await fetch("/api/admin/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-code": code },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) { alert("Konnte Item nicht speichern (Admin-Code korrekt?)."); return; }
-    (document.getElementById("add-form") as HTMLFormElement)?.reset();
-  }
-
-  async function removeItem(id: string) {
-    const code = adminCode ?? ""; if (!code) return;
-    if (!confirm("Wirklich löschen?")) return;
-    const res = await fetch("/api/admin/items", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-admin-code": code },
-      body: JSON.stringify({ id }),
-    });
-    if (!res.ok) alert("Löschen fehlgeschlagen.");
-  }
-
-  function enableAdmin() {
-    const code = prompt("Admin-Code eingeben:")?.trim(); if (!code) return;
-    localStorage.setItem(ADMIN_FLAG, code); setAdminCode(code);
-  }
-  function disableAdmin() { localStorage.removeItem(ADMIN_FLAG); setAdminCode(null); }
-
-  async function saveParentEmails() {
-    const code = adminCode ?? ""; if (!code) return alert("Admin-Code fehlt.");
-    const res = await fetch("/api/admin/config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-code": code },
-      body: JSON.stringify({ emails: parentEmails }),
-    });
-    if (res.ok) alert("Gespeichert."); else alert("Speichern fehlgeschlagen.");
-  }
-
-
+  const openItems = items.filter(item => item.status === 'offen');
+  const reservedItems = items.filter(item => item.status === 'reserviert');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="max-w-6xl mx-auto p-6 space-y-8">
-        {/* Header */}
-        <header className="text-center space-y-4">
-          <h1 className="text-5xl font-bold gradient-text">👶 Baby in Need</h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Eine liebevolle Plattform für Baby-Geschenke. Schenkende können Items reservieren und Eltern werden automatisch benachrichtigt.
-          </p>
-          
-          <div className="flex items-center justify-center gap-4">
-            {adminCode ? (
-              <button 
-                className="px-6 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300" 
-                onClick={disableAdmin}
-              >
-                🔐 Admin deaktivieren
-              </button>
-            ) : (
-              <button 
-                className="px-6 py-3 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300" 
-                onClick={enableAdmin}
-              >
-                🔑 Admin aktivieren
-              </button>
-            )}
-            <button 
-              className="px-6 py-3 rounded-full bg-violet-500 hover:bg-violet-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300" 
-              onClick={async () => {
-                await navigator.clipboard.writeText(window.location.href);
-                alert("✅ Öffentlichen Link kopiert!");
-              }}
-            >
-              📋 Link kopieren
-            </button>
-          </div>
-        </header>
-
-        {/* Game Section */}
-        <StrollerGame />
-
-        {/* Admin Sections */}
-        {adminCode && (
-          <>
-
-            {/* Settings */}
-            <section className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
-                ⚙️ Einstellungen
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    📧 E-Mails der Beschenkten (Komma-getrennt)
-                  </label>
-                  <input 
-                    value={parentEmails} 
-                    onChange={(e) => setParentEmails(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
-                    placeholder="du@mail.ch, partner@mail.ch" 
+      {/* Header */}
+      <header className="bg-white shadow-lg border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between">
+            <div className="text-center sm:text-left mb-4 sm:mb-0">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                🍼 Baby in Need
+              </h1>
+              <p className="text-slate-600 mt-2">Gemeinsam für Familien da</p>
+            </div>
+            
+            {/* Admin Access */}
+            <div className="flex items-center space-x-4">
+              {!adminMode && (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="password"
+                    placeholder="Admin-Code"
+                    value={adminCode}
+                    onChange={(e) => setAdminCode(e.target.value)}
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
-                <button 
-                  onClick={saveParentEmails} 
-                  className="px-6 py-3 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  💾 Speichern
-                </button>
-              </div>
-            </section>
-
-            {/* Add Item */}
-            <section className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
-                ➕ Neues Item hinzufügen
-              </h2>
-              <form 
-                id="add-form" 
-                onSubmit={(e) => { e.preventDefault(); addItem(new FormData(e.currentTarget)); }}
-                className="grid gap-4 md:grid-cols-6"
-              >
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Item *</label>
-                  <input 
-                    name="item" 
-                    required 
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
-                    placeholder="z.B. Tragetuch" 
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Link</label>
-                  <input 
-                    name="url" 
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
-                    placeholder="https://…" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Preis</label>
-                  <input 
-                    name="price" 
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
-                    placeholder="CHF …" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Grösse</label>
-                  <input 
-                    name="size" 
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
-                    placeholder="62/68, 0–3 M" 
-                  />
-                </div>
-                <div className="md:col-span-6">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Notizen</label>
-                  <input 
-                    name="notes" 
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300" 
-                    placeholder="Farbe/Variante, Alternativen …" 
-                  />
-                </div>
-                <div className="md:col-span-6">
-                  <button 
-                    type="submit" 
-                    className="px-8 py-3 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
+              )}
+              {adminMode && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-green-600 font-medium">👑 Admin-Modus</span>
+                  <button
+                    onClick={() => setAdminMode(false)}
+                    className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                   >
-                    ➕ Hinzufügen
+                    Beenden
                   </button>
                 </div>
-              </form>
-            </section>
-          </>
-        )}
-
-        {/* Items Grid */}
-        <section className="grid gap-8 md:grid-cols-2">
-          {/* Open Items */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
-              🎁 Offen <span className="text-sm font-normal text-slate-500">({open.length})</span>
-            </h2>
-            {loading && <div className="text-slate-500 text-center py-8">⏳ Lädt…</div>}
-            {!loading && open.length === 0 && (
-              <div className="text-slate-500 text-center py-8">✨ Keine offenen Items.</div>
-            )}
-            <ul className="space-y-4">
-              {open.map((i) => (
-                <li key={i.id} className="border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all duration-300 bg-gradient-to-r from-blue-50 to-indigo-50">
-                  <div className="space-y-3">
-                    <div className="font-semibold text-lg text-slate-800">{i.item}</div>
-                    <div className="flex flex-wrap gap-2">
-                      {i.price && (
-                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                          💰 {i.price}
-                        </span>
-                      )}
-                      {i.size && (
-                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                          📏 Grösse {i.size}
-                        </span>
-                      )}
-                      {i.url && (
-                        <a 
-                          className="px-3 py-1 bg-violet-100 text-violet-800 rounded-full text-sm font-medium hover:bg-violet-200 transition-colors duration-300" 
-                          href={i.url} 
-                          target="_blank"
-                        >
-                          🔗 Zum Produkt
-                        </a>
-                      )}
-                    </div>
-                    {i.notes && (
-                      <div className="text-sm text-slate-600 bg-white p-3 rounded-lg border border-slate-200">
-                        📝 {i.notes}
-                      </div>
-                    )}
-                    <div className="flex gap-3">
-                      <button 
-                        className="flex-1 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300" 
-                        onClick={() => claim(i.id)} 
-                        data-item-id={i.id}
-                      >
-                        🎁 Ich schenke das
-                      </button>
-                      {adminCode && (
-                        <button 
-                          className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300" 
-                          onClick={() => removeItem(i.id)}
-                        >
-                          🗑️ Löschen
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+              )}
+            </div>
           </div>
+        </div>
+      </header>
 
-          {/* Reserved Items */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
-              ✅ Reserviert <span className="text-sm font-normal text-slate-500">({reserved.length})</span>
-            </h2>
-            {!loading && reserved.length === 0 && (
-              <div className="text-slate-500 text-center py-8">🎉 Noch nichts reserviert.</div>
-            )}
-            <ul className="space-y-4">
-              {reserved.map((i) => (
-                <li key={i.id} className="border border-slate-200 rounded-xl p-4 bg-gradient-to-r from-green-50 to-emerald-50">
-                  <div className="space-y-3">
-                    <div className="font-semibold text-lg text-slate-800">{i.item}</div>
-                    <div className="text-sm text-slate-600 bg-white p-3 rounded-lg border border-slate-200">
-                      📅 Reserviert am {new Date(i.claimed_at!).toLocaleDateString('de-CH')}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Offene Items */}
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+            🟢 Offen ({openItems.length})
+          </h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {openItems.map((item) => (
+              <div key={item.id} className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-shadow">
+                {/* Item Name - Prominent and Large */}
+                <h3 className="text-xl font-bold text-slate-800 mb-3 leading-tight">
+                  {item.name}
+                </h3>
+                
+                {/* Item Details */}
+                <div className="space-y-2 mb-4">
+                  {item.price && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">💰</span>
+                      <span className="text-slate-700 font-medium">{item.price}</span>
                     </div>
-                    {adminCode && (
-                      <button 
-                        className="w-full px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300" 
-                        onClick={() => removeItem(i.id)}
+                  )}
+                  {item.size && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">📏</span>
+                      <span className="text-slate-700 font-medium">{item.size}</span>
+                    </div>
+                  )}
+                  {item.notes && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-slate-500 mt-1">📝</span>
+                      <span className="text-slate-700 text-sm leading-relaxed">{item.notes}</span>
+                    </div>
+                  )}
+                  {item.link && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">🔗</span>
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 hover:text-indigo-800 font-medium text-sm underline"
                       >
-                        🗑️ Löschen
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                        Link öffnen
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => claimItem(item.id)}
+                    className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+                  >
+                    🎯 Reservieren
+                  </button>
+                  {adminMode && (
+                    <button
+                      onClick={() => deleteItem(item.id)}
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
+          {openItems.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-slate-500 text-lg">Keine offenen Items verfügbar</p>
+            </div>
+          )}
         </section>
 
-        {/* Footer */}
-        <footer className="text-center text-slate-500 text-sm py-8">
-          <p>🔗 Öffentlichen Link teilen → Gäste können reservieren (ohne Login).</p>
-        </footer>
+        {/* Reservierte Items */}
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+            🟡 Reserviert ({reservedItems.length})
+          </h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {reservedItems.map((item) => (
+              <div key={item.id} className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-shadow">
+                {/* Item Name - Prominent and Large */}
+                <h3 className="text-xl font-bold text-slate-800 mb-3 leading-tight">
+                  {item.name}
+                </h3>
+                
+                {/* Item Details */}
+                <div className="space-y-2 mb-4">
+                  {item.price && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">💰</span>
+                      <span className="text-slate-700 font-medium">{item.price}</span>
+                    </div>
+                  )}
+                  {item.size && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">📏</span>
+                      <span className="text-slate-700 font-medium">{item.size}</span>
+                    </div>
+                  )}
+                  {item.notes && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-slate-500 mt-1">📝</span>
+                      <span className="text-slate-700 text-sm leading-relaxed">{item.notes}</span>
+                    </div>
+                  )}
+                  {item.link && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">🔗</span>
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 hover:text-indigo-800 font-medium text-sm underline"
+                      >
+                        Link öffnen
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Admin Delete Button */}
+                {adminMode && (
+                  <button
+                    onClick={() => deleteItem(item.id)}
+                    className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                  >
+                    🗑️ Löschen
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {reservedItems.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-slate-500 text-lg">Keine reservierten Items</p>
+            </div>
+          )}
+        </section>
+
+        {/* E-Mails der Beschenkten - Admin Only */}
+        {adminMode && (
+          <section className="mb-12">
+            <h2 className="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+              📧 E-Mails der Beschenkten
+            </h2>
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    E-Mail-Adressen (kommagetrennt)
+                  </label>
+                  <textarea
+                    value={emailRecipients}
+                    onChange={(e) => setEmailRecipients(e.target.value)}
+                    placeholder="email1@example.com, email2@example.com"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={saveEmailConfig}
+                  disabled={configLoading}
+                  className="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-medium disabled:opacity-50"
+                >
+                  {configLoading ? 'Speichere...' : '💾 Speichern'}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Stadt-Labyrinth Spiel - Toggle Button */}
+        <section className="mb-12">
+          <div className="text-center mb-6">
+            <button
+              onClick={() => setShowGame(!showGame)}
+              className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 mx-auto"
+            >
+              {showGame ? '🎮 Spiel ausblenden' : '🎮 Stadt-Labyrinth Spiel'}
+              {showGame ? '👆' : '👇'}
+            </button>
+          </div>
+          
+          {/* Game Container */}
+          {showGame && (
+            <div className="animate-fadeIn">
+              <StrollerGame />
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
