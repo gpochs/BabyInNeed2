@@ -8,7 +8,7 @@ interface Position {
 
 interface Obstacle {
   id: string;
-  type: 'house' | 'skyscraper' | 'tree' | 'trafficLight' | 'bikeRack' | 'wall' | 'hedge' | 'street' | 'school' | 'hospital' | 'mall' | 'forest';
+  type: 'house' | 'skyscraper' | 'tree' | 'trafficLight' | 'bikeRack' | 'wall' | 'hedge' | 'street' | 'school' | 'hospital' | 'mall' | 'forest' | 'park' | 'fountain' | 'statue' | 'bench' | 'lamp' | 'trashBin' | 'crossing';
   pos: Position;
   size: { width: number; height: number };
   emoji: string;
