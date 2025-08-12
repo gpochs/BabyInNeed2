@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     const recipients = parents.length ? parents : fallback;
 
     const resend = new Resend(process.env.RESEND_API_KEY!);
-    const from = process.env.NOTIFY_FROM ?? "Baby in Need <onboarding@resend.dev>";
+    const from = process.env.NOTIFY_FROM ?? "Baby in Need <noreply@ailiteracy.ch>";
 
     // Donor confirmation - CRITICAL: This must succeed
     let donorEmailSent = false;

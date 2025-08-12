@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       }
 
       const resend = new Resend(process.env.RESEND_API_KEY!);
-      const from = process.env.NOTIFY_FROM ?? "Baby in Need <onboarding@resend.dev>";
+      const from = process.env.NOTIFY_FROM ?? "Baby in Need <noreply@ailiteracy.ch>";
       
       try {
         const testTemplate = emailTemplates.donorConfirmation(itemName);

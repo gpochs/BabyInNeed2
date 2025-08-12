@@ -60,7 +60,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # E-Mail (Resend)
-RESEND_API_KEY=your_resend_api_key
+RESEND_API_KEY=re_3MHFTcbs_BFPEx4G55qeJvQ6Zc8qJDGFz
 ADMIN_CODE=your_admin_secret_code
 ```
 
@@ -68,11 +68,11 @@ ADMIN_CODE=your_admin_secret_code
 
 ```bash
 # E-Mail-Einstellungen
-NOTIFY_FROM=your_custom_from_email@domain.com
-RECIPIENTS_TO=parent1@email.com,parent2@email.com
+NOTIFY_FROM=Baby in Need <noreply@ailiteracy.ch>
+RECIPIENTS_TO=gianpeterochsner@gmail.com
 
-# Standard: "Baby in Need <onboarding@resend.dev>"
-# Standard: Leer (wird aus Datenbank geladen)
+# Standard: "Baby in Need <noreply@ailiteracy.ch>"
+# Standard: gianpeterochsner@gmail.com
 ```
 
 ## 📧 E-Mail-Service (Resend)
