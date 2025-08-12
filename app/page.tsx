@@ -8,7 +8,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables');
+  console.error('Missing Supabase environment variables:', { supabaseUrl: !!supabaseUrl, supabaseAnonKey: !!supabaseAnonKey });
 }
 
 const supabase = createClient(
@@ -77,12 +77,19 @@ export default function Home() {
   const loadItems = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('Loading items...'); // Debug log
+      
       const { data, error } = await supabase
         .from('items')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase load error:', error);
+        throw error;
+      }
+      
+      console.log('Items loaded:', data?.length || 0, 'items'); // Debug log
       
       // Ensure all items have required fields with fallbacks
       const safeItems = (data || []).map(item => ({
@@ -100,6 +107,7 @@ export default function Home() {
       }));
       
       setItems(safeItems);
+      console.log('Safe items set:', safeItems.length); // Debug log
     } catch (error) {
       console.error('Error loading items:', error);
       setItems([]); // Set empty array on error
@@ -160,21 +168,45 @@ export default function Home() {
 
     setAddItemLoading(true);
     try {
-      const { error } = await supabase
+      console.log('Adding item:', newItem); // Debug log
+      
+      // Prepare item data - only include filled fields
+      const itemData: {
+        name: string;
+        status: string;
+        priority: string;
+        price?: string;
+        size?: string;
+        color?: string;
+        notes?: string;
+        link?: string;
+        category?: string;
+      } = {
+        name: newItem.name.trim(),
+        status: 'offen',
+        priority: newItem.priority
+      };
+      
+      // Only add other fields if they have content
+      if (newItem.price.trim()) itemData.price = newItem.price.trim();
+      if (newItem.size.trim()) itemData.size = newItem.size.trim();
+      if (newItem.color.trim()) itemData.color = newItem.color.trim();
+      if (newItem.notes.trim()) itemData.notes = newItem.notes.trim();
+      if (newItem.link.trim()) itemData.link = newItem.link.trim();
+      if (newItem.category.trim()) itemData.category = newItem.category.trim();
+      
+      const { data, error } = await supabase
         .from('items')
-        .insert({
-          name: newItem.name.trim(),
-          price: newItem.price.trim() || null,
-          size: newItem.size.trim() || null,
-          color: newItem.color.trim() || null,
-          notes: newItem.notes.trim() || null,
-          link: newItem.link.trim() || null,
-          priority: newItem.priority,
-          category: newItem.category.trim() || null,
-          status: 'offen'
-        });
+        .insert(itemData)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Item added successfully:', data); // Debug log
       
       await loadItems();
       setNewItem({
@@ -193,7 +225,7 @@ export default function Home() {
       alert('Item erfolgreich hinzugefügt!');
     } catch (error) {
       console.error('Error adding item:', error);
-      alert('Fehler beim Hinzufügen des Items!');
+      alert(`Fehler beim Hinzufügen des Items: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
     } finally {
       setAddItemLoading(false);
     }
@@ -204,17 +236,24 @@ export default function Home() {
     if (!confirm('Möchtest du dieses Item wirklich löschen?')) return;
 
     try {
+      console.log('Deleting item with ID:', id); // Debug log
+      
       const { error } = await supabase
         .from('items')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase delete error:', error);
+        throw error;
+      }
+      
+      console.log('Item deleted successfully'); // Debug log
       await loadItems();
       alert('Item erfolgreich gelöscht!');
     } catch (error) {
       console.error('Error deleting item:', error);
-      alert('Fehler beim Löschen des Items!');
+      alert(`Fehler beim Löschen des Items: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
     }
   }, [loadItems]);
 
@@ -269,6 +308,29 @@ export default function Home() {
       .filter(cat => cat && cat.trim() && cat !== 'undefined')
   ))];
 
+
+
+  // Helper function to render link if valid
+  const renderLink = (link: string | undefined) => {
+    if (!link || !link.trim() || (!link.startsWith('http://') && !link.startsWith('https://'))) {
+      return null;
+    }
+    
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-slate-500">🔗</span>
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-indigo-600 hover:text-indigo-800 font-medium text-sm underline"
+        >
+          Link öffnen
+        </a>
+      </div>
+    );
+  };
+
   // Load data on mount
   useEffect(() => {
     loadItems();
@@ -316,7 +378,7 @@ export default function Home() {
                     placeholder="Admin-Code"
                     value={adminCode}
                     onChange={(e) => setAdminCode(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    className="px-3 py-2 border-2 border-slate-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white text-slate-800 font-medium placeholder-slate-500"
                   />
                   <button
                     onClick={() => {
@@ -561,19 +623,7 @@ export default function Home() {
                         <span className="text-slate-700 text-sm leading-relaxed">{item.notes}</span>
                       </div>
                     )}
-                    {item.link && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500">🔗</span>
-                        <a
-                          href={item.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-600 hover:text-indigo-800 font-medium text-sm underline"
-                        >
-                          Link öffnen
-                        </a>
-                      </div>
-                    )}
+                    {renderLink(item.link)}
                   </div>
 
                   {/* Action Buttons */}
@@ -657,19 +707,7 @@ export default function Home() {
                         <span className="text-slate-700 text-sm leading-relaxed">{item.notes}</span>
                       </div>
                     )}
-                    {item.link && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500">🔗</span>
-                        <a
-                          href={item.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-600 hover:text-indigo-800 font-medium text-sm underline"
-                        >
-                          Link öffnen
-                        </a>
-                      </div>
-                    )}
+                    {renderLink(item.link)}
                   </div>
 
                   {/* Admin Delete Button */}
