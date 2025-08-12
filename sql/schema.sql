@@ -6,7 +6,9 @@ create table if not exists public.items (
   url text,
   price text,
   size text,
+  color text,
   notes text,
+  link text,
   priority text check (priority in ('low', 'medium', 'high')) default 'medium',
   category text,
   status text check (status in ('offen', 'reserviert')) default 'offen',
@@ -92,3 +94,26 @@ create trigger update_items_updated_at
   before update on public.items
   for each row
   execute function update_updated_at_column();
+
+-- Add missing columns if they don't exist (for existing databases)
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_name = 'items' and column_name = 'color') then
+    alter table public.items add column color text;
+  end if;
+  
+  if not exists (select 1 from information_schema.columns where table_name = 'items' and column_name = 'link') then
+    alter table public.items add column link text;
+  end if;
+  
+  if not exists (select 1 from information_schema.columns where table_name = 'items' and column_name = 'status') then
+    alter table public.items add column status text check (status in ('offen', 'reserviert')) default 'offen';
+  end if;
+  
+  if not exists (select 1 from information_schema.columns where table_name = 'items' and column_name = 'priority') then
+    alter table public.items add column priority text check (priority in ('low', 'medium', 'high')) default 'medium';
+  end if;
+  
+  if not exists (select 1 from information_schema.columns where table_name = 'items' and column_name = 'category') then
+    alter table public.items add column category text;
+  end if;
+end $$;
