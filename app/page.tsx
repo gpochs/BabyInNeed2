@@ -11,6 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables:', { supabaseUrl: !!supabaseUrl, supabaseAnonKey: !!supabaseAnonKey });
 }
 
+// Create Supabase client with fallbacks
 const supabase = createClient(
   supabaseUrl || 'https://ksrgpydocqesasbnxmew.supabase.co',
   supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzcmdweWRvY3Flc2FzYm54bWV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NTM5NDcsImV4cCI6MjA3MDUyOTk0N30.hAiYw1pcWDmOYn7Qju8xweCBdCQCKcNbGX8chXYVWlo'
@@ -78,6 +79,13 @@ export default function Home() {
     try {
       setLoading(true);
       console.log('Loading items...'); // Debug log
+      console.log('Supabase URL:', supabaseUrl); // Debug log
+      console.log('Supabase Key available:', !!supabaseAnonKey); // Debug log
+      
+      // Check if Supabase is available
+      if (!supabaseUrl && !supabaseAnonKey) {
+        console.warn('Using fallback Supabase credentials');
+      }
       
       const { data, error } = await supabase
         .from('items')
@@ -90,6 +98,7 @@ export default function Home() {
       }
       
       console.log('Items loaded:', data?.length || 0, 'items'); // Debug log
+      console.log('Raw data:', data); // Debug log
       
       // Ensure all items have required fields with fallbacks
       const safeItems = (data || []).map(item => ({
@@ -108,6 +117,7 @@ export default function Home() {
       
       setItems(safeItems);
       console.log('Safe items set:', safeItems.length); // Debug log
+      console.log('Final items:', safeItems); // Debug log
     } catch (error) {
       console.error('Error loading items:', error);
       setItems([]); // Set empty array on error
@@ -169,6 +179,8 @@ export default function Home() {
     setAddItemLoading(true);
     try {
       console.log('Adding item:', newItem); // Debug log
+      console.log('Supabase URL:', supabaseUrl); // Debug log
+      console.log('Supabase Key available:', !!supabaseAnonKey); // Debug log
       
       // Prepare item data - only include filled fields
       const itemData: {
@@ -195,6 +207,8 @@ export default function Home() {
       if (newItem.link.trim()) itemData.link = newItem.link.trim();
       if (newItem.category.trim()) itemData.category = newItem.category.trim();
       
+      console.log('Item data to insert:', itemData); // Debug log
+      
       const { data, error } = await supabase
         .from('items')
         .insert(itemData)
@@ -208,7 +222,10 @@ export default function Home() {
       
       console.log('Item added successfully:', data); // Debug log
       
+      // Force reload items immediately
       await loadItems();
+      
+      // Reset form
       setNewItem({
         name: '',
         price: '',
@@ -333,6 +350,13 @@ export default function Home() {
 
   // Load data on mount
   useEffect(() => {
+    console.log('App mounted, loading data...'); // Debug log
+    console.log('Environment check:', {
+      supabaseUrl: !!supabaseUrl,
+      supabaseAnonKey: !!supabaseAnonKey,
+      nodeEnv: process.env.NODE_ENV
+    }); // Debug log
+    
     loadItems();
     loadEmailConfig();
   }, [loadItems, loadEmailConfig]);
@@ -345,6 +369,9 @@ export default function Home() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-300 mx-auto mb-4"></div>
           <p className="text-slate-200 text-lg font-medium">Lade Items...</p>
+          {(!supabaseUrl || !supabaseAnonKey) && (
+            <p className="text-slate-300 text-sm mt-2">Verwende Fallback-Verbindung</p>
+          )}
         </div>
       </div>
     );
