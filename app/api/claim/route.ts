@@ -21,8 +21,8 @@ export async function POST(req: Request) {
     // load parents' emails from config (fallback to env)
     const conf = await supabaseAdmin.from("config").select("value").eq("key", "email_recipients").maybeSingle();
     const configured = conf.data?.value ?? "";
-    const parents = configured.split(",").map((s) => s.trim()).filter(Boolean);
-    const fallback = (process.env.RECIPIENTS_TO ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const parents = configured.split(",").map((s: string) => s.trim()).filter(Boolean);
+    const fallback = (process.env.RECIPIENTS_TO ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
     const recipients = parents.length ? parents : fallback;
 
     const resend = new Resend(process.env.RESEND_API_KEY!);
