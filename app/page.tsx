@@ -44,13 +44,21 @@ export default function Home() {
   const [configLoading, setConfigLoading] = useState(false);
   const [addItemLoading, setAddItemLoading] = useState(false);
   const [addItemSuccess, setAddItemSuccess] = useState(false);
-  const [newItem, setNewItem] = useState({
+  const [newItem, setNewItem] = useState<{
+    name: string;
+    price: string;
+    size: string;
+    notes: string;
+    link: string;
+    priority: 'low' | 'medium' | 'high';
+    category: string;
+  }>({
     name: '',
     price: '',
     size: '',
     notes: '',
     link: '',
-    priority: 'medium' as const,
+    priority: 'medium',
     category: ''
   });
 
@@ -198,22 +206,7 @@ export default function Home() {
     }
   }, [loadItems]);
 
-  // Claim item (legacy function - keeping for compatibility)
-  const claimItem = useCallback(async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('items')
-        .update({ status: 'reserviert' })
-        .eq('id', id);
 
-      if (error) throw error;
-      await loadItems();
-      alert('Item erfolgreich reserviert!');
-    } catch (error) {
-      console.error('Error claiming item:', error);
-      alert('Fehler beim Reservieren des Items!');
-    }
-  }, [loadItems]);
 
   // Filter items
   const filteredItems = items.filter(item => {
@@ -406,7 +399,7 @@ export default function Home() {
                   />
                   <select
                     value={newItem.priority}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, priority: e.target.value as any }))}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
                     className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
                     <option value="low">Niedrige Priorität</option>
@@ -695,7 +688,7 @@ export default function Home() {
                 🎯 Item reservieren
               </h3>
               <p className="text-slate-600 mb-4">
-                Du möchtest <strong>"{showClaimModal.itemName}"</strong> reservieren?
+                Du möchtest <strong>&quot;{showClaimModal.itemName}&quot;</strong> reservieren?
               </p>
               <p className="text-slate-600 mb-4">
                 Bitte gib deine E-Mail-Adresse ein, um eine Bestätigung zu erhalten.

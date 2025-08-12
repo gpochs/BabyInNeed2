@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     .split(",").map((s) => s.trim()).filter(Boolean).join(", ");
   const { error } = await supabaseAdmin
     .from("config")
-    .upsert({ key: "recipients", value: { emails: normalized } }, { onConflict: "key" });
+    .upsert({ key: "email_recipients", value: normalized }, { onConflict: "key" });
   if (error) return new Response(error.message, { status: 500 });
   return Response.json({ ok: true, emails: normalized });
 }

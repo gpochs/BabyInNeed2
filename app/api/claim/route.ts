@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       // Rollback the claim
       await supabaseAdmin
         .from("items")
-        .update({ claimed_at: null })
+        .update({ status: 'offen' })
         .eq("id", id);
       
       return new Response("Failed to send confirmation email. Please try again.", { status: 500 });

@@ -258,7 +258,7 @@ export default function StrollerGame() {
     });
     
     return { obstacles, vehicles };
-  }, []);
+  }, [createVehiclePath]);
 
   // Create path for vehicles
   const createVehiclePath = useCallback((startPos: Position, obstacles: Obstacle[]): Position[] => {
