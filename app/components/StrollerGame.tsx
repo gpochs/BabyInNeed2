@@ -41,8 +41,8 @@ interface GameState {
   gameTime: number;
 }
 
-const GAME_SIZE = 25; // Reduced for mobile compatibility
-const CELL_SIZE = 24; // Slightly larger cells for 25x25 grid
+const GAME_SIZE = 20; // Changed to 20x20 for better mobile compatibility
+const CELL_SIZE = 28; // Slightly larger cells for 20x20 grid
 const GAME_SPEED = 50;
 
 export default function StrollerGame() {
@@ -77,14 +77,13 @@ export default function StrollerGame() {
     const obstacles: Obstacle[] = [];
     const vehicles: Vehicle[] = [];
     
-    // Create street network (adjusted for 25x25)
+    // Create street network (adjusted for 20x20)
     const horizontalStreets = [
       { y: 2, startX: 0, endX: GAME_SIZE - 1 },
       { y: 6, startX: 0, endX: GAME_SIZE - 1 },
       { y: 10, startX: 0, endX: GAME_SIZE - 1 },
       { y: 14, startX: 0, endX: GAME_SIZE - 1 },
-      { y: 18, startX: 0, endX: GAME_SIZE - 1 },
-      { y: 22, startX: 0, endX: GAME_SIZE - 1 }
+      { y: 18, startX: 0, endX: GAME_SIZE - 1 }
     ];
     
     const verticalStreets = [
@@ -92,8 +91,7 @@ export default function StrollerGame() {
       { x: 6, startY: 0, endY: GAME_SIZE - 1 },
       { x: 10, startY: 0, endY: GAME_SIZE - 1 },
       { x: 14, startY: 0, endY: GAME_SIZE - 1 },
-      { x: 18, startY: 0, endY: GAME_SIZE - 1 },
-      { x: 22, startY: 0, endY: GAME_SIZE - 1 }
+      { x: 18, startY: 0, endY: GAME_SIZE - 1 }
     ];
 
     // Add horizontal streets
@@ -142,15 +140,15 @@ export default function StrollerGame() {
       }
     }
 
-    // Add buildings and obstacles (adjusted counts for 25x25)
+    // Add buildings and obstacles (adjusted counts for 20x20)
     const buildingTypes = [
-      { type: 'house' as const, count: 12, emoji: '🏠', color: 'bg-red-600' },
-      { type: 'skyscraper' as const, count: 8, emoji: '🏢', color: 'bg-blue-600' },
-      { type: 'tree' as const, count: 16, emoji: '🌳', color: 'bg-green-600' },
-      { type: 'trafficLight' as const, count: 6, emoji: '🚦', color: 'bg-yellow-500' },
-      { type: 'bikeRack' as const, count: 4, emoji: '🚲', color: 'bg-gray-500' },
-      { type: 'wall' as const, count: 8, emoji: '🧱', color: 'bg-gray-700' },
-      { type: 'hedge' as const, count: 10, emoji: '🌿', color: 'bg-green-500' },
+      { type: 'house' as const, count: 10, emoji: '🏠', color: 'bg-red-600' },
+      { type: 'skyscraper' as const, count: 6, emoji: '🏢', color: 'bg-blue-600' },
+      { type: 'tree' as const, count: 12, emoji: '🌳', color: 'bg-green-600' },
+      { type: 'trafficLight' as const, count: 4, emoji: '🚦', color: 'bg-yellow-500' },
+      { type: 'bikeRack' as const, count: 3, emoji: '🚲', color: 'bg-gray-500' },
+      { type: 'wall' as const, count: 6, emoji: '🧱', color: 'bg-gray-700' },
+      { type: 'hedge' as const, count: 8, emoji: '🌿', color: 'bg-green-500' },
       { type: 'school' as const, count: 1, emoji: '🏫', color: 'bg-purple-600' },
       { type: 'hospital' as const, count: 1, emoji: '🏥', color: 'bg-red-500' },
       { type: 'mall' as const, count: 1, emoji: '🏬', color: 'bg-pink-500' },
@@ -270,7 +268,7 @@ export default function StrollerGame() {
     let currentPos = { ...startPos };
     let direction = { x: 1, y: 0 };
     
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 20; i++) {
       const nextPos = {
         x: currentPos.x + direction.x,
         y: currentPos.y + direction.y
@@ -519,7 +517,7 @@ export default function StrollerGame() {
     return (
       <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 text-center">
         <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center justify-center gap-3">
-          🏙️ Stadt-Labyrinth
+          🏙️ Stadt-Labyrinth (20x20)
         </h2>
         <p className="text-slate-600 mb-4 max-w-md mx-auto text-sm">
           Führe den Kinderwagen mit dem Baby sicher durch die Stadt zum ZIEL-Haus! 
@@ -550,7 +548,7 @@ export default function StrollerGame() {
     <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
       <div className="text-center mb-4">
         <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center justify-center gap-3">
-          🏙️ Stadt-Labyrinth
+          🏙️ Stadt-Labyrinth (20x20)
         </h2>
         <div className="flex items-center justify-center gap-4 text-base flex-wrap">
           <span className="text-slate-600">Punkte: <span className="font-bold text-indigo-600">{gameState.score}</span></span>

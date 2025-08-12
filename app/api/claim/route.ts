@@ -9,18 +9,18 @@ export async function POST(req: Request) {
 
     const { data, error } = await supabaseAdmin
       .from("items")
-      .update({ claimed_at: new Date().toISOString() })
+      .update({ status: 'reserviert' })
       .eq("id", id)
-      .is("claimed_at", null)
-      .select("id,item,claimed_at")
+      .eq("status", "offen")
+      .select("id,name,status")
       .single();
 
     if (error) return new Response(error.message, { status: 500 });
     if (!data) return new Response("Already claimed", { status: 409 });
 
     // load parents' emails from config (fallback to env)
-    const conf = await supabaseAdmin.from("config").select("value").eq("key", "recipients").maybeSingle();
-    const configured = (conf.data?.value?.emails as string | undefined) ?? "";
+    const conf = await supabaseAdmin.from("config").select("value").eq("key", "email_recipients").maybeSingle();
+    const configured = conf.data?.value ?? "";
     const parents = configured.split(",").map((s) => s.trim()).filter(Boolean);
     const fallback = (process.env.RECIPIENTS_TO ?? "").split(",").map((s) => s.trim()).filter(Boolean);
     const recipients = parents.length ? parents : fallback;
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     // Donor confirmation - CRITICAL: This must succeed
     let donorEmailSent = false;
     try {
-      const donorTemplate = emailTemplates.donorConfirmation(data.item);
+      const donorTemplate = emailTemplates.donorConfirmation(data.name);
       const donorResult = await resend.emails.send({
         from, 
         to: email,
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     // Parents notification (item only) - Less critical, can fail
     if (recipients.length) {
       try {
-        const parentTemplate = emailTemplates.parentNotification(data.item);
+        const parentTemplate = emailTemplates.parentNotification(data.name);
         const parentResult = await resend.emails.send({
           from, 
           to: recipients,
@@ -83,11 +83,11 @@ export async function POST(req: Request) {
     }
 
     // Log successful claim
-    console.log(`Item "${data.item}" successfully claimed by ${email} at ${new Date().toISOString()}`);
+    console.log(`Item "${data.name}" successfully claimed by ${email} at ${new Date().toISOString()}`);
 
     return Response.json({ 
       ok: true, 
-      item: data.item,
+      item: data.name,
       emailSent: donorEmailSent 
     });
   } catch (e: unknown) {
