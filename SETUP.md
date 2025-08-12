@@ -77,3 +77,6 @@ npm run dev
 - Optimized for small screens
 - Fast loading and smooth animations
 
+
+
+
