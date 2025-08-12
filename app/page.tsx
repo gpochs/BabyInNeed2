@@ -25,6 +25,7 @@ interface Item {
   color: string;
   notes: string;
   link?: string;
+  url?: string; // Support both link and url for compatibility
   status: 'offen' | 'reserviert';
   created_at: string;
   priority?: 'low' | 'medium' | 'high';
@@ -108,7 +109,7 @@ export default function Home() {
         size: item.size || '',
         color: item.color || '',
         notes: item.notes || '',
-        link: item.link || '',
+        link: item.link || item.url || '', // Support both link and url
         status: item.status || 'offen',
         created_at: item.created_at || new Date().toISOString(),
         priority: item.priority || 'medium',
